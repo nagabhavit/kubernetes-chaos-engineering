@@ -122,6 +122,8 @@ def cmd_report(_a) -> int:
           f"narrative: {r['narrative']['used']} {r['narrative'].get('model') or ''}")
     for f in r["findings"]:
         print(f"  {f['rank']}. [{f['severity']}] {f['title']}  <{f['text_source']}>")
+    lab = r.get("latency_lab") or []
+    print(f"Latency lab runs: {len(lab)} ({sum(x['status'] == 'PASS' for x in lab)} PASS), reported in their own section")
     print("Saved:", r["saved_to"])
     return 0
 

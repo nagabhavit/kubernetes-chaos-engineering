@@ -1,0 +1,82 @@
+[
+  {
+    "time": "2026-10-10T17:53:23Z",
+    "type": "Normal",
+    "reason": "Killing",
+    "object": "Pod/productcatalogservice-99c4c7c7f-hm66m",
+    "message": "Stopping container server",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:23Z",
+    "type": "Normal",
+    "reason": "SuccessfulDelete",
+    "object": "ReplicaSet/productcatalogservice-99c4c7c7f",
+    "message": "Deleted pod: productcatalogservice-99c4c7c7f-hm66m",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:23Z",
+    "type": "Normal",
+    "reason": "ScalingReplicaSet",
+    "object": "Deployment/productcatalogservice",
+    "message": "Scaled down replica set productcatalogservice-99c4c7c7f from 1 to 0",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:25Z",
+    "type": "Normal",
+    "reason": "Scheduled",
+    "object": "Pod/productcatalogservice-99c4c7c7f-4qwxf",
+    "message": "Successfully assigned boutique/productcatalogservice-99c4c7c7f-4qwxf to boutique-chaos-control-plane",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:25Z",
+    "type": "Normal",
+    "reason": "SuccessfulCreate",
+    "object": "ReplicaSet/productcatalogservice-99c4c7c7f",
+    "message": "Created pod: productcatalogservice-99c4c7c7f-4qwxf",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:25Z",
+    "type": "Normal",
+    "reason": "ScalingReplicaSet",
+    "object": "Deployment/productcatalogservice",
+    "message": "Scaled up replica set productcatalogservice-99c4c7c7f from 0 to 1",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:26Z",
+    "type": "Normal",
+    "reason": "Pulled",
+    "object": "Pod/productcatalogservice-99c4c7c7f-4qwxf",
+    "message": "Container image \"us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7\" already present on machine and can be accessed by the pod",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:26Z",
+    "type": "Normal",
+    "reason": "Created",
+    "object": "Pod/productcatalogservice-99c4c7c7f-4qwxf",
+    "message": "Container created",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:26Z",
+    "type": "Normal",
+    "reason": "Started",
+    "object": "Pod/productcatalogservice-99c4c7c7f-4qwxf",
+    "message": "Container started",
+    "count": 1
+  },
+  {
+    "time": "2026-10-10T17:53:27Z",
+    "type": "Warning",
+    "reason": "Unhealthy",
+    "object": "Pod/productcatalogservice-99c4c7c7f-4qwxf",
+    "message": "Readiness probe failed: timeout: failed to connect service \"10.244.0.22:3550\" within 1s: context deadline exceeded",
+    "count": 1
+  }
+]

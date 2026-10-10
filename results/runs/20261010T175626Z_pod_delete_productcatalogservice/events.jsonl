@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T17:56:26.475Z", "event": "run_started", "run_id": "20261010T175626Z_pod_delete_productcatalogservice", "target": "productcatalogservice", "fault": "pod_delete", "duration": 20}
+{"ts": "2026-10-10T17:56:26.679Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7"}
+{"ts": "2026-10-10T17:56:41.711Z", "event": "baseline", "n": 58, "errors": 0, "error_rate": 0.0, "p95_ms": 60.2, "consecutive_conn_errors": 0, "consecutive_failures": 0, "last_sample_age_s": 0.08734583854675293}
+{"ts": "2026-10-10T17:56:41.804Z", "event": "fault_injected", "target": "productcatalogservice", "fault": "pod_delete", "at": "2026-10-10T17:56:41.712Z", "detail": "pod \"productcatalogservice-99c4c7c7f-4qwxf\" deleted from boutique namespace"}
+{"ts": "2026-10-10T17:56:44.212Z", "event": "threshold_breach", "metric": "p95_ms", "value": 2020.2, "limit": 1000.0, "n": 12, "errors": 1, "error_rate": 0.08333333333333333, "p95_ms": 2020.2, "consecutive_conn_errors": 0, "consecutive_failures": 1, "last_sample_age_s": 2.0735111236572266}
+{"ts": "2026-10-10T17:56:44.299Z", "event": "restore_ok", "target": "productcatalogservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T17:56:44.396Z", "event": "rollout_status", "ok": true, "out": "deployment \"productcatalogservice\" successfully rolled out"}
+{"ts": "2026-10-10T17:57:04.409Z", "event": "recovered", "user_recovery_s": 21.48}
+{"ts": "2026-10-10T17:57:34.410Z", "event": "post_window", "n": 117, "errors": 0, "error_rate": 0.0, "p95_ms": 63.8, "consecutive_conn_errors": 0, "consecutive_failures": 0, "last_sample_age_s": 0.1725931167602539}
+{"ts": "2026-10-10T17:57:34.501Z", "event": "run_finished", "status": "ABORTED_THRESHOLD", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T175626Z_pod_delete_productcatalogservice\\summary.json"}

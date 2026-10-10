@@ -133,6 +133,36 @@ def load_runs() -> list[dict]:
     return runs
 
 
+def load_lab_runs() -> list[dict]:
+    """Network-latency validation runs on disposable lab pods (chaos/netem_lab.py). Reported in their own
+    section: they measure the netem mechanism, not the application, so they are not part of the score."""
+    out = []
+    if not C.RUNS_DIR.exists():
+        return out
+    for d in sorted(C.RUNS_DIR.glob("*_network_latency_lab")):
+        p = d / "summary.json"
+        if not p.exists():
+            continue
+        s = json.loads(p.read_text(encoding="utf-8"))
+        ph = s.get("phases") or {}
+        reason = None
+        ev = d / "events.jsonl"
+        if s.get("status") != "PASS" and ev.exists():
+            for line in ev.read_text(encoding="utf-8").splitlines():
+                try:
+                    e = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if e.get("event") in ("aborted", "error"):
+                    reason = str(e.get("reason") or e.get("error"))[:160]
+        out.append({"run_id": s["run_id"], "status": s.get("status"), "reason": reason,
+                    "delay_ms": (s.get("request") or {}).get("delay_ms"),
+                    "samples": (s.get("request") or {}).get("samples"),
+                    "before": ph.get("before"), "during": ph.get("during"), "after": ph.get("after"),
+                    "checks": s.get("checks"), "cleanup": s.get("cleanup")})
+    return out
+
+
 def group_metrics(runs: list[dict]) -> list[dict]:
     groups = {}
     for s in runs:
@@ -207,7 +237,7 @@ def derive_findings(groups: list[dict]) -> list[dict]:
                 {"runs": g["runs"], "k8s_ready_s_median": g["k8s_ready_s"],
                  "user_recovery_s_median": g["user_recovery_s"], "gap_s_median": g["ready_vs_user_gap_s"]})
         if (g["error_rate_in_fault"] or 0) >= 0.5 and f in ("scale_to_zero", "pod_delete"):
-            add("hard_dependency", g, f"{t} is a hard dependency / single point of failure",
+            add("hard_dependency", g, f"{t} is a hard dependency / single point of failure ({f.replace('_', ' ')})",
                 {"runs": g["runs"], "error_rate_in_fault_median": g["error_rate_in_fault"],
                  "first_error_s_median": g["first_error_s"], "affected_routes": len(g["affected_routes"]),
                  "replicas": 1})
@@ -218,7 +248,9 @@ def derive_findings(groups: list[dict]) -> list[dict]:
             base, during = g["baseline_p95_ms"] or 0, g["p95_in_fault_ms"] or 0
             if during >= 2 * max(base, 1) or g["any_user_errors"] or "ABORTED_THRESHOLD" in g["statuses"]:
                 what = "a traffic spike" if f == "traffic_spike" else f"network delay on {t}"
-                add("latency_sensitivity", g, f"User-facing latency/errors degrade under {what}",
+                errs = g["error_rate_in_fault"] or 0
+                add("latency_sensitivity", g, f"P95 latency rises from {base:.0f} to {during:.0f} ms under {what} "
+                                              f"({'no errors' if not errs else f'{100 * errs:.0f}% errors'})",
                     {"runs": g["runs"], "baseline_p95_ms": base, "p95_in_fault_ms": during,
                      "error_rate_in_fault_median": g["error_rate_in_fault"], "throughput_rps": g["throughput_rps"]})
             else:
@@ -330,7 +362,9 @@ def render(rep: dict) -> str:
     n = rep["narrative"]
     L_ = ["# Findings Report: Online Boutique (local kind sandbox)", "",
           f"Generated {rep['generated']} by `chaos/analyze.py` from **{rep['run_count']} controller runs** "
-          f"({len(rep['groups'])} distinct experiments; fault types: {', '.join(rep['resilience']['fault_types_tested'])}).", "",
+          f"({len(rep['groups'])} distinct experiments; fault types: {', '.join(rep['resilience']['fault_types_tested'])})"
+          + (f", plus {len(rep.get('latency_lab') or [])} network-latency lab runs (separate section)" if rep.get("latency_lab") else "")
+          + ".", "",
           "**How to read this report:** *Observed facts* are computed by code from `results/runs/*`. "
           "*Likely cause* is a hypothesis. *Recommended fix* and *verification experiment* are proposals.", "",
           f"**Narrative written by:** {n['used']}" + (f" (`{n['model']}`)" if n.get("model") else "")
@@ -359,6 +393,32 @@ def render(rep: dict) -> str:
                f"**Recommended fix:** {f['recommended_fix']}", "",
                f"**Verification experiment:** {f['verification_experiment']}", "",
                f"<sub>Narrative source: {f['text_source']}</sub>", ""]
+    lab = rep.get("latency_lab") or []
+    L_ += ["## Network latency: disposable lab validation (not part of the score)", "",
+           "`chaos/netem_lab.py` applies `tc netem` only to the disposable pod `chaos-lab-server`. A second "
+           "disposable pod measures it with curl (HTTP) and ping before, during and after. No application pod is touched, "
+           "so these runs validate the latency mechanism and are reported here, not in the resilience score. "
+           "Latency on application pods is disabled.", ""]
+    if lab:
+        L_ += ["| Run | Result | Delay | Ping avg before → during → after (ms) | HTTP median before → during → after (ms) "
+               "| Requests OK | netem removal verified | Cleanup |", "|---|---|---|---|---|---|---|---|"]
+        for r in lab:
+            b, d, a = r["before"] or {}, r["during"] or {}, r["after"] or {}
+            ok = "/".join(str(x.get("ok", "—")) for x in (b, d, a)) + (f" of {r['samples']}" if r["samples"] else "")
+            res = f"**{r['status']}**" + (f" ({r['reason'].replace('|', '/')})" if r.get("reason") else "")
+            L_.append(f"| `{r['run_id']}` | {res} | {r['delay_ms']} ms | "
+                      f"{b.get('ping_avg_ms', '—')} → {d.get('ping_avg_ms', '—')} → {a.get('ping_avg_ms', '—')} | "
+                      f"{b.get('http_total_ms_median', '—')} → {d.get('http_total_ms_median', '—')} → "
+                      f"{a.get('http_total_ms_median', '—')} | {ok} | "
+                      f"{(r['checks'] or {}).get('netem_removed_verified', '—')} | {'; '.join(r['cleanup'] or []) or '—'} |")
+        passed = [r for r in lab if r["status"] == "PASS"]
+        L_ += ["", f"{len(passed)} of {len(lab)} lab runs passed. A run passes only if, during the fault, ping or "
+               "the HTTP median rises by at least 80% of the configured delay; ping returns to within max(5 ms, 50%) "
+               "of before; all requests succeed before and after; and removal of netem is verified with `tc qdisc show`. "
+               "HTTP rises by about twice the delay because both the TCP handshake reply and the response leave the "
+               "delayed pod.", ""]
+    else:
+        L_ += ["No lab runs recorded yet. Run: `python chaos\\cli.py latency-lab --delay-ms 200`.", ""]
     L_ += ["## Limitations", "",
            "- Local kind cluster, 1 replica per service, laptop resources. The results apply to this configuration only.",
            "- The probe calls `/`, a product page and `/cart` every 0.25 s. Checkout, payment and email are not exercised, "
@@ -376,7 +436,8 @@ def analyze() -> dict:
     findings = derive_findings(groups)
     meta = narrate(findings) if findings else {"used": "none (no findings)", "model": None, "errors": []}
     rep = {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "run_count": len(runs),
-           "groups": groups, "findings": findings, "resilience": resilience(groups), "narrative": meta}
+           "groups": groups, "findings": findings, "resilience": resilience(groups), "narrative": meta,
+           "latency_lab": load_lab_runs()}
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(rep, indent=2), encoding="utf-8")
     OUT_MD.write_text(render(rep), encoding="utf-8")

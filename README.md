@@ -9,7 +9,7 @@ AI-planned, safety-controlled chaos experiments on Google's Online Boutique in a
 .\.venv313\Scripts\Activate.ps1
 pip install -r requirements.txt            # LangGraph, Locust, Streamlit, ...
 ollama pull qwen2.5:3b                     # free local planner model
-python -m pytest tests -q                  # 62 safety tests on fakes (touches nothing)
+python -m pytest tests -q                  # 63 safety tests on fakes (touches nothing)
 python chaos\cli.py health                 # cluster, frontend, models, kill switch
 python chaos\cli.py plan                   # AI ranks experiments (no execution)
 python chaos\cli.py dry-run --rank 1       # full workflow, nothing injected

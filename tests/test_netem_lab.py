@@ -89,3 +89,16 @@ def test_invalid_manifest_is_caught_by_dry_run_and_nothing_is_created(shop):
     assert r.returncode == 2 and s["status"] == "FAILED"
     assert not [c for c in calls() if c[4:6] == ["apply", "-f"]]           # real apply never ran
     assert cluster().get("lab", {}).get("pods", []) == []
+
+
+def test_lab_runs_appear_in_findings_report_but_not_in_score(shop):
+    import analyze as A
+    lab("--delay-ms", "200", "--duration", "15", "--samples", "5")
+    r = A.analyze()
+    assert len(r["latency_lab"]) == 1 and r["latency_lab"][0]["status"] == "PASS"
+    assert all("lab" not in g["fault"] for g in r["groups"])                      # not mixed into the score
+    md = (DATA / "results" / "findings-report.md").read_text(encoding="utf-8")
+    assert "## Network latency: disposable lab validation" in md
+    row = next(l for l in md.splitlines() if "_network_latency_lab`" in l)
+    assert "**PASS**" in row and "200 ms" in row and "True" in row
+    assert "1 of 1 lab runs passed" in md

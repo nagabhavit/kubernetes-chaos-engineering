@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T17:58:03.379Z", "event": "run_started", "run_id": "20261010T175803Z_traffic_spike_frontend", "target": "frontend", "fault": "traffic_spike", "duration": 20}
+{"ts": "2026-10-10T17:58:03.588Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/frontend:v0.10.7"}
+{"ts": "2026-10-10T17:58:18.622Z", "event": "baseline", "n": 59, "errors": 0, "error_rate": 0.0, "p95_ms": 62.8, "consecutive_conn_errors": 0, "consecutive_failures": 0, "last_sample_age_s": 0.10124564170837402}
+{"ts": "2026-10-10T17:58:18.632Z", "event": "fault_injected", "target": "frontend", "fault": "traffic_spike", "at": "2026-10-10T17:58:18.623Z", "detail": "spike_users=80"}
+{"ts": "2026-10-10T17:58:38.680Z", "event": "duration_cap_reached", "elapsed_s": 20.06}
+{"ts": "2026-10-10T17:58:38.684Z", "event": "restore_ok", "action": "traffic spike stopped", "locust_exit": 1}
+{"ts": "2026-10-10T17:58:38.802Z", "event": "rollout_status", "ok": true, "out": "deployment \"frontend\" successfully rolled out"}
+{"ts": "2026-10-10T17:58:40.303Z", "event": "recovered", "user_recovery_s": 0.1}
+{"ts": "2026-10-10T17:59:10.305Z", "event": "post_window", "n": 119, "errors": 0, "error_rate": 0.0, "p95_ms": 50.5, "consecutive_conn_errors": 0, "consecutive_failures": 0, "last_sample_age_s": 0.07483410835266113}
+{"ts": "2026-10-10T17:59:10.396Z", "event": "run_finished", "status": "COMPLETED", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T175803Z_traffic_spike_frontend\\summary.json"}

@@ -1,0 +1,732 @@
+{
+  "generated": "2026-10-10T18:11:46+00:00",
+  "run_count": 12,
+  "groups": [
+    {
+      "target": "productcatalogservice",
+      "fault": "scale_to_zero",
+      "runs": 6,
+      "run_ids": [
+        "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "20261010T175308Z_scale_to_zero_productcatalogservice"
+      ],
+      "statuses": [
+        "ABORTED_THRESHOLD"
+      ],
+      "error_rate_in_fault": 0.67,
+      "any_user_errors": true,
+      "p95_in_fault_ms": 2010.45,
+      "baseline_p95_ms": 238.2,
+      "post_p95_ms": 203.05,
+      "fault_duration_s": 2.83,
+      "first_error_s": 0.42,
+      "abort_after_s": 2.83,
+      "k8s_ready_s": 2.83,
+      "user_recovery_s": 18.87,
+      "ready_vs_user_gap_s": 16.04,
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "routes_probed": 3,
+      "throughput_rps": 2.0,
+      "probe_covers_target": true,
+      "confidence": "high"
+    },
+    {
+      "target": "adservice",
+      "fault": "scale_to_zero",
+      "runs": 2,
+      "run_ids": [
+        "20261010T091112Z_scale_to_zero_adservice",
+        "20261010T091455Z_scale_to_zero_adservice"
+      ],
+      "statuses": [
+        "ABORTED_KILL_SWITCH",
+        "COMPLETED"
+      ],
+      "error_rate_in_fault": 0.0,
+      "any_user_errors": false,
+      "p95_in_fault_ms": 245.95,
+      "baseline_p95_ms": 214.4,
+      "post_p95_ms": 199.95,
+      "fault_duration_s": 35.09,
+      "first_error_s": null,
+      "abort_after_s": null,
+      "k8s_ready_s": 55.4,
+      "user_recovery_s": null,
+      "ready_vs_user_gap_s": null,
+      "affected_routes": [],
+      "routes_probed": 3,
+      "throughput_rps": null,
+      "probe_covers_target": true,
+      "confidence": "medium"
+    },
+    {
+      "target": "cartservice",
+      "fault": "scale_to_zero",
+      "runs": 1,
+      "run_ids": [
+        "20261010T100435Z_scale_to_zero_cartservice"
+      ],
+      "statuses": [
+        "ABORTED_THRESHOLD"
+      ],
+      "error_rate_in_fault": 0.67,
+      "any_user_errors": true,
+      "p95_in_fault_ms": 104.1,
+      "baseline_p95_ms": 101.9,
+      "post_p95_ms": 201.2,
+      "fault_duration_s": 1.64,
+      "first_error_s": 0.64,
+      "abort_after_s": 1.64,
+      "k8s_ready_s": 32.06,
+      "user_recovery_s": 48.16,
+      "ready_vs_user_gap_s": 16.1,
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "routes_probed": 3,
+      "throughput_rps": null,
+      "probe_covers_target": true,
+      "confidence": "low (single run)"
+    },
+    {
+      "target": "paymentservice",
+      "fault": "scale_to_zero",
+      "runs": 1,
+      "run_ids": [
+        "20261010T104306Z_scale_to_zero_paymentservice"
+      ],
+      "statuses": [
+        "COMPLETED"
+      ],
+      "error_rate_in_fault": 0.0,
+      "any_user_errors": false,
+      "p95_in_fault_ms": 33.0,
+      "baseline_p95_ms": 45.4,
+      "post_p95_ms": 47.2,
+      "fault_duration_s": 15.12,
+      "first_error_s": null,
+      "abort_after_s": null,
+      "k8s_ready_s": 11.87,
+      "user_recovery_s": null,
+      "ready_vs_user_gap_s": null,
+      "affected_routes": [],
+      "routes_probed": 3,
+      "throughput_rps": null,
+      "probe_covers_target": false,
+      "confidence": "low (single run)"
+    },
+    {
+      "target": "productcatalogservice",
+      "fault": "pod_delete",
+      "runs": 1,
+      "run_ids": [
+        "20261010T175626Z_pod_delete_productcatalogservice"
+      ],
+      "statuses": [
+        "ABORTED_THRESHOLD"
+      ],
+      "error_rate_in_fault": 0.67,
+      "any_user_errors": true,
+      "p95_in_fault_ms": 2020.2,
+      "baseline_p95_ms": 60.2,
+      "post_p95_ms": 63.8,
+      "fault_duration_s": 2.5,
+      "first_error_s": 0.43,
+      "abort_after_s": 2.5,
+      "k8s_ready_s": 0.18,
+      "user_recovery_s": 21.48,
+      "ready_vs_user_gap_s": null,
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "routes_probed": 3,
+      "throughput_rps": null,
+      "probe_covers_target": true,
+      "confidence": "low (single run)"
+    },
+    {
+      "target": "frontend",
+      "fault": "traffic_spike",
+      "runs": 1,
+      "run_ids": [
+        "20261010T175803Z_traffic_spike_frontend"
+      ],
+      "statuses": [
+        "COMPLETED"
+      ],
+      "error_rate_in_fault": 0.0,
+      "any_user_errors": false,
+      "p95_in_fault_ms": 251.9,
+      "baseline_p95_ms": 62.8,
+      "post_p95_ms": 50.5,
+      "fault_duration_s": 20.06,
+      "first_error_s": null,
+      "abort_after_s": null,
+      "k8s_ready_s": 0.12,
+      "user_recovery_s": null,
+      "ready_vs_user_gap_s": null,
+      "affected_routes": [],
+      "routes_probed": 3,
+      "throughput_rps": 23.86,
+      "probe_covers_target": true,
+      "confidence": "low (single run)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "kind": "recovery_gap",
+      "target": "productcatalogservice",
+      "fault": "scale_to_zero",
+      "title": "Users keep failing after productcatalogservice is Ready",
+      "severity_score": 66.0,
+      "severity": "High",
+      "priority": 66.0,
+      "confidence": "high",
+      "affected_services": [
+        "frontend",
+        "productcatalogservice"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 6,
+        "k8s_ready_s_median": 2.83,
+        "user_recovery_s_median": 18.87,
+        "gap_s_median": 16.04
+      },
+      "run_ids": [
+        "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "20261010T175308Z_scale_to_zero_productcatalogservice"
+      ],
+      "rank": 1,
+      "likely_cause": "Users are experiencing failures after productcatalogservice is Ready, likely due to the high gap time between Ready and user recovery.",
+      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the gap time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F2",
+      "kind": "hard_dependency",
+      "target": "productcatalogservice",
+      "fault": "scale_to_zero",
+      "title": "productcatalogservice is a hard dependency / single point of failure (scale to zero)",
+      "severity_score": 66.0,
+      "severity": "High",
+      "priority": 66.0,
+      "confidence": "high",
+      "affected_services": [
+        "frontend",
+        "productcatalogservice"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 6,
+        "error_rate_in_fault_median": 0.67,
+        "first_error_s_median": 0.42,
+        "affected_routes": 3,
+        "replicas": 1
+      },
+      "run_ids": [
+        "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "20261010T175308Z_scale_to_zero_productcatalogservice"
+      ],
+      "rank": 2,
+      "likely_cause": "productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.",
+      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F5",
+      "kind": "recovery_gap",
+      "target": "cartservice",
+      "fault": "scale_to_zero",
+      "title": "Users keep failing after cartservice is Ready",
+      "severity_score": 68.9,
+      "severity": "High",
+      "priority": 48.2,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "cartservice",
+        "frontend"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 1,
+        "k8s_ready_s_median": 32.06,
+        "user_recovery_s_median": 48.16,
+        "gap_s_median": 16.1
+      },
+      "run_ids": [
+        "20261010T100435Z_scale_to_zero_cartservice"
+      ],
+      "rank": 3,
+      "likely_cause": "Users are experiencing failures after cartservice is Ready, likely due to the high gap time between Ready and user recovery.",
+      "recommended_fix": "Increase the number of replicas for cartservice to reduce the gap time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F6",
+      "kind": "hard_dependency",
+      "target": "cartservice",
+      "fault": "scale_to_zero",
+      "title": "cartservice is a hard dependency / single point of failure (scale to zero)",
+      "severity_score": 68.9,
+      "severity": "High",
+      "priority": 48.2,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "cartservice",
+        "frontend"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 1,
+        "error_rate_in_fault_median": 0.67,
+        "first_error_s_median": 0.64,
+        "affected_routes": 3,
+        "replicas": 1
+      },
+      "run_ids": [
+        "20261010T100435Z_scale_to_zero_cartservice"
+      ],
+      "rank": 4,
+      "likely_cause": "cartservice is a single point of failure, likely due to its high error rate and short recovery time.",
+      "recommended_fix": "Increase the number of replicas for cartservice to reduce the error rate and recovery time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F7",
+      "kind": "slow_restart",
+      "target": "cartservice",
+      "fault": "scale_to_zero",
+      "title": "cartservice takes 32 s to become Ready after restore",
+      "severity_score": 68.9,
+      "severity": "High",
+      "priority": 48.2,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "cartservice",
+        "frontend"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 1,
+        "k8s_ready_s_median": 32.06
+      },
+      "run_ids": [
+        "20261010T100435Z_scale_to_zero_cartservice"
+      ],
+      "rank": 5,
+      "likely_cause": "cartservice takes a long time to become Ready, likely due to its high initial readiness time.",
+      "recommended_fix": "Increase the number of replicas for cartservice to reduce the initial readiness time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F9",
+      "kind": "hard_dependency",
+      "target": "productcatalogservice",
+      "fault": "pod_delete",
+      "title": "productcatalogservice is a hard dependency / single point of failure (pod delete)",
+      "severity_score": 66.8,
+      "severity": "High",
+      "priority": 46.8,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "frontend",
+        "productcatalogservice"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 1,
+        "error_rate_in_fault_median": 0.67,
+        "first_error_s_median": 0.43,
+        "affected_routes": 3,
+        "replicas": 1
+      },
+      "run_ids": [
+        "20261010T175626Z_pod_delete_productcatalogservice"
+      ],
+      "rank": 6,
+      "likely_cause": "productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.",
+      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F11",
+      "kind": "detection_delay",
+      "target": "productcatalogservice",
+      "fault": "scale_to_zero",
+      "title": "Auto-abort fires ~2 s after the first error (our tooling)",
+      "severity_score": 10.0,
+      "severity": "Low",
+      "priority": 10.0,
+      "confidence": "high",
+      "affected_services": [
+        "frontend",
+        "productcatalogservice"
+      ],
+      "affected_routes": [
+        "/",
+        "/cart",
+        "/product/<id>"
+      ],
+      "evidence": {
+        "runs": 6,
+        "first_error_s_median": 0.42,
+        "abort_after_s_median": 2.83
+      },
+      "run_ids": [
+        "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "20261010T175308Z_scale_to_zero_productcatalogservice"
+      ],
+      "rank": 7,
+      "likely_cause": "Auto-abort fires after the first error, likely due to the high error rate and short recovery time.",
+      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F8",
+      "kind": "coverage_gap",
+      "target": "paymentservice",
+      "fault": "scale_to_zero",
+      "title": "paymentservice outage not visible to the probe (untested path)",
+      "severity_score": 5.0,
+      "severity": "Info",
+      "priority": 3.5,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "frontend",
+        "paymentservice"
+      ],
+      "affected_routes": [],
+      "evidence": {
+        "runs": 1,
+        "error_rate_in_fault_median": 0.0
+      },
+      "run_ids": [
+        "20261010T104306Z_scale_to_zero_paymentservice"
+      ],
+      "rank": 8,
+      "likely_cause": "paymentservice outage is not visible to the probe, likely due to the untested path.",
+      "recommended_fix": "Test the paymentservice outage path to ensure visibility.",
+      "verification_experiment": "Run a stress test with the paymentservice outage path to confirm visibility.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F3",
+      "kind": "slow_restart",
+      "target": "adservice",
+      "fault": "scale_to_zero",
+      "title": "adservice takes 55 s to become Ready after restore",
+      "severity_score": 2.6,
+      "severity": "Info",
+      "priority": 2.2,
+      "confidence": "medium",
+      "affected_services": [
+        "adservice",
+        "frontend"
+      ],
+      "affected_routes": [],
+      "evidence": {
+        "runs": 2,
+        "k8s_ready_s_median": 55.4
+      },
+      "run_ids": [
+        "20261010T091112Z_scale_to_zero_adservice",
+        "20261010T091455Z_scale_to_zero_adservice"
+      ],
+      "rank": 9,
+      "likely_cause": "adservice takes a long time to become Ready, likely due to its high initial readiness time.",
+      "recommended_fix": "Increase the number of replicas for adservice to reduce the initial readiness time.",
+      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F10",
+      "kind": "latency_sensitivity",
+      "target": "frontend",
+      "fault": "traffic_spike",
+      "title": "P95 latency rises from 63 to 252 ms under a traffic spike (no errors)",
+      "severity_score": 1.9,
+      "severity": "Info",
+      "priority": 1.3,
+      "confidence": "low (single run)",
+      "affected_services": [
+        "frontend"
+      ],
+      "affected_routes": [],
+      "evidence": {
+        "runs": 1,
+        "baseline_p95_ms": 62.8,
+        "p95_in_fault_ms": 251.9,
+        "error_rate_in_fault_median": 0.0,
+        "throughput_rps": 23.86
+      },
+      "run_ids": [
+        "20261010T175803Z_traffic_spike_frontend"
+      ],
+      "rank": 10,
+      "likely_cause": "There is a traffic spike, likely due to the high P95 latency.",
+      "recommended_fix": "Monitor and adjust the traffic to reduce the P95 latency.",
+      "verification_experiment": "Run a stress test with reduced traffic to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    },
+    {
+      "id": "F4",
+      "kind": "graceful",
+      "target": "adservice",
+      "fault": "scale_to_zero",
+      "title": "Frontend degrades gracefully without adservice",
+      "severity_score": 0.0,
+      "severity": "Info",
+      "priority": 0.0,
+      "confidence": "medium",
+      "affected_services": [
+        "adservice",
+        "frontend"
+      ],
+      "affected_routes": [],
+      "evidence": {
+        "runs": 2,
+        "error_rate_in_fault_median": 0.0,
+        "fault_duration_s_median": 35.09
+      },
+      "run_ids": [
+        "20261010T091112Z_scale_to_zero_adservice",
+        "20261010T091455Z_scale_to_zero_adservice"
+      ],
+      "rank": 11,
+      "likely_cause": "Frontend can degrade gracefully without adservice, likely due to the absence of adservice.",
+      "recommended_fix": "Ensure adservice is always available to prevent degradations.",
+      "verification_experiment": "Monitor the frontend for degradations without adservice to confirm the fix.",
+      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+    }
+  ],
+  "resilience": {
+    "overall": 65.5,
+    "per_experiment": [
+      {
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "score": 34.0
+      },
+      {
+        "target": "adservice",
+        "fault": "scale_to_zero",
+        "score": 97.4
+      },
+      {
+        "target": "cartservice",
+        "fault": "scale_to_zero",
+        "score": 31.1
+      },
+      {
+        "target": "paymentservice",
+        "fault": "scale_to_zero",
+        "score": 99.5
+      },
+      {
+        "target": "productcatalogservice",
+        "fault": "pod_delete",
+        "score": 33.2
+      },
+      {
+        "target": "frontend",
+        "fault": "traffic_spike",
+        "score": 98.1
+      }
+    ],
+    "coverage": "4/10 allowlisted services tested",
+    "fault_types_tested": [
+      "pod_delete",
+      "scale_to_zero",
+      "traffic_spike"
+    ],
+    "formula": "severity (0-100) = 40 x error rate during fault + 20 x (affected routes / 3 probed routes) + 25 x min(1, user-facing outage s / 60) + 5 x min(1, Kubernetes-ready s / 120) + 10 x min(1, extra P95 ms over baseline / 1000); outage = fault duration + user recovery. priority = severity x confidence weight (high 1.0, medium 0.85, single run 0.7). Resilience score per experiment = 100 - severity; overall = mean over tested experiments."
+  },
+  "narrative": {
+    "used": "local Ollama (planner model)",
+    "model": "qwen2.5:3b",
+    "errors": [
+      "llama3.2:3b: not pulled"
+    ]
+  },
+  "latency_lab": [
+    {
+      "run_id": "20261010T172518Z_network_latency_lab",
+      "status": "FAILED",
+      "reason": "kubectl apply -f C:\\Projects\\microservices-demo\\chaos\\latency-lab.yaml failed (rc=1): error: error parsing C:\\Projects\\microservices-demo\\chaos\\latency-lab.yaml",
+      "delay_ms": 200,
+      "samples": 15,
+      "before": null,
+      "during": null,
+      "after": null,
+      "checks": null,
+      "cleanup": []
+    },
+    {
+      "run_id": "20261010T174253Z_network_latency_lab",
+      "status": "PASS",
+      "reason": null,
+      "delay_ms": 200,
+      "samples": 15,
+      "before": {
+        "phase": "before",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 1.51,
+        "http_total_ms_p95": 2.09,
+        "http_connect_ms_median": 0.18,
+        "ping_avg_ms": 0.119,
+        "ping_min_ms": 0.048,
+        "ping_raw": null
+      },
+      "during": {
+        "phase": "during",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 404.62,
+        "http_total_ms_p95": 405.25,
+        "http_connect_ms_median": 200.55,
+        "ping_avg_ms": 200.012,
+        "ping_min_ms": 197.754,
+        "ping_raw": null
+      },
+      "after": {
+        "phase": "after",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 4.7,
+        "http_total_ms_p95": 5.23,
+        "http_connect_ms_median": 0.54,
+        "ping_avg_ms": 0.135,
+        "ping_min_ms": 0.081,
+        "ping_raw": null
+      },
+      "checks": {
+        "all_requests_ok_before_and_after": true,
+        "ping_increase_during_ms": 199.89,
+        "http_increase_during_ms": 403.11,
+        "ping_after_minus_before_ms": 0.02,
+        "netem_removed_verified": true,
+        "delay_visible_during": true,
+        "delay_gone_after": true
+      },
+      "cleanup": [
+        "lab pods deleted rc=0"
+      ]
+    },
+    {
+      "run_id": "20261010T175151Z_network_latency_lab",
+      "status": "PASS",
+      "reason": null,
+      "delay_ms": 200,
+      "samples": 15,
+      "before": {
+        "phase": "before",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 0.93,
+        "http_total_ms_p95": 1.06,
+        "http_connect_ms_median": 0.12,
+        "ping_avg_ms": 0.075,
+        "ping_min_ms": 0.031,
+        "ping_raw": null
+      },
+      "during": {
+        "phase": "during",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 401.83,
+        "http_total_ms_p95": 404.72,
+        "http_connect_ms_median": 200.29,
+        "ping_avg_ms": 200.107,
+        "ping_min_ms": 200.066,
+        "ping_raw": null
+      },
+      "after": {
+        "phase": "after",
+        "requests": 15,
+        "ok": 15,
+        "errors": [],
+        "http_total_ms_median": 1.65,
+        "http_total_ms_p95": 2.05,
+        "http_connect_ms_median": 0.24,
+        "ping_avg_ms": 0.051,
+        "ping_min_ms": 0.033,
+        "ping_raw": null
+      },
+      "checks": {
+        "all_requests_ok_before_and_after": true,
+        "ping_increase_during_ms": 200.03,
+        "http_increase_during_ms": 400.9,
+        "ping_after_minus_before_ms": -0.02,
+        "netem_removed_verified": true,
+        "delay_visible_during": true,
+        "delay_gone_after": true
+      },
+      "cleanup": [
+        "lab pods deleted rc=0"
+      ]
+    }
+  ]
+}

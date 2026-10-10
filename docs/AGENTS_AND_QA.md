@@ -36,6 +36,6 @@
 
 **What happens if your controller crashes mid-fault?** The state file records what was changed. The executor's watchdog, or a human running `restore.py`, undoes it. This is tested.
 
-**What is tested?** 62 automated tests with a fake `kubectl` and a fake shop. They cover validation, malformed AI output, kill switch, watchdog timeout, threshold abort, telemetry loss, injection failure, cleanup failure plus recovery, restoring the original replica count, recovery verification, Ollama unavailable or malformed output, no cloud API ever called, the AI number guard, the latency lab (pass, failure, cleanup failure, kill switch), and the LangGraph paths (dry run, rejection, human decline, full run).
+**What is tested?** 63 automated tests with a fake `kubectl` and a fake shop. They cover validation, malformed AI output, kill switch, watchdog timeout, threshold abort, telemetry loss, injection failure, cleanup failure plus recovery, restoring the original replica count, recovery verification, Ollama unavailable or malformed output, no cloud API ever called, the AI number guard, the latency lab (pass, failure, cleanup failure, kill switch), and the LangGraph paths (dry run, rejection, human decline, full run).
 
 **Limitations?** Single-node local cluster, 1 replica per service, a laptop. Several findings come from only 1–2 runs. Causes are hypotheses until verification experiments are run.

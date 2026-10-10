@@ -21,7 +21,7 @@ kubectl --context kind-boutique-chaos wait --for=condition=available deployment 
 - [ ] **Separate window, keep open:** `kubectl --context kind-boutique-chaos port-forward -n boutique service/frontend 8080:80`
 
 ## 2. Verify before any experiment
-- [ ] `python -m pytest tests -q` → 61 passed, 1 skipped (Windows: no socat) (uses fakes; touches nothing)
+- [ ] `python -m pytest tests -q` → 62 passed, 1 skipped (Windows: no socat) (uses fakes; touches nothing)
 - [ ] `python chaos\cli.py health` → `READY`
 - [ ] `python chaos\cli.py map` → dependency map rebuilt from the live cluster
 
