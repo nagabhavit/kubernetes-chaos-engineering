@@ -18,6 +18,9 @@ Endpoints used by the UI:
   POST /experiments/random-errors/stop   same as /experiment/stop
   POST /rollback                     {confirm: true} stop any fault, restore, verify recovery
   GET  /runs                         history of controller runs (from results/runs)
+  POST /planner/plan                 AI planner ranks experiments (validated; never executes)
+  GET  /planner/latest               most recent plan
+  POST /planner/run                  {rank} run ONE validated proposal through the controller
 
 Standard library only. Binds to 127.0.0.1.
 """
@@ -37,6 +40,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import controller as C  # noqa: E402  (allowlist, Prober, kubectl helpers)
 import dashboard as D   # noqa: E402  (run readers, cached cluster view)
+import planner as PL    # noqa: E402  (AI planner + deterministic validator)
 
 HOST, PORT = "127.0.0.1", 8000
 FRONTEND_URL = "http://localhost:8080"
@@ -179,6 +183,8 @@ class Runner:
 
 
 INGEST, RUNNER = Ingestion(), Runner()
+PLAN = {"latest": None}
+PLAN_LOCK = threading.Lock()
 
 
 def frontend_ok():
@@ -254,6 +260,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, t)
         if u.path == "/experiments/current":
             return self._json(200, RUNNER.current())
+        if u.path == "/planner/latest":
+            return self._json(200, {k: v for k, v in (PLAN["latest"] or {}).items() if k != "context"})
         if u.path == "/runs":
             return self._json(200, {"runs": D.list_runs()})
         self._json(404, {"error": "not found"})
@@ -293,6 +301,31 @@ class Handler(BaseHTTPRequestHandler):
                 INGEST.start()
             code, res = RUNNER.start(target, fault, RANDOM_DURATION_S, "random real experiment", origin="random")
             res["note"] = f"real {fault} on randomly chosen allowlisted target '{target}' for {RANDOM_DURATION_S}s"
+            return self._json(code, res)
+        if path == "/planner/plan":
+            if not PLAN_LOCK.acquire(blocking=False):
+                return self._json(409, {"error": "a plan is already being generated"})
+            try:
+                PLAN["latest"] = PL.make_plan()
+            finally:
+                PLAN_LOCK.release()
+            return self._json(200, {k: v for k, v in PLAN["latest"].items() if k != "context"})
+        if path == "/planner/run":
+            plan = PLAN["latest"]
+            if not plan:
+                return self._json(400, {"status": "REJECTED", "reasons": ["no plan generated yet"]})
+            prop = next((e for e in plan["experiments"] if e["rank"] == body.get("rank")), None)
+            if not prop:
+                return self._json(400, {"status": "REJECTED", "reasons": [f"rank {body.get('rank')} not in latest plan"]})
+            ok, bad = PL.validate([prop])   # re-validate at execution time
+            if bad:
+                return self._json(400, {"status": "REJECTED", "reasons": bad[0]["reasons"]})
+            if not INGEST.running:
+                INGEST.start()
+            tag = "AI" if plan["planner"].startswith("AI") else "rule-based"
+            code, res = RUNNER.start(prop["target"], prop["fault_type"], prop["duration_seconds"],
+                                     f"planner({tag}) #{prop['rank']}: {prop['hypothesis']}", origin="planner")
+            res["proposal"] = prop
             return self._json(code, res)
         if path == "/rollback":
             if body.get("confirm") is not True:

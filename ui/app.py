@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import uuid
@@ -199,6 +200,7 @@ st.sidebar.write("✓ Hard 60 s fault cap")
 st.sidebar.write("✓ Auto-abort: error rate > 20 % or P95 > 1 s")
 st.sidebar.write("✓ Kill switch + guaranteed restore")
 st.sidebar.write("✓ Recovery verification")
+st.sidebar.write("✓ AI proposals validated; AI never executes")
 st.sidebar.markdown("Live chart view: [127.0.0.1:8090](http://127.0.0.1:8090)")
 
 # =========================================================
@@ -265,6 +267,61 @@ with status_col:
         st.metric("Ingestion status", "RUNNING" if st.session_state.ingestion_running else "STOPPED")
 
 st.caption("Stopping ingestion stops collection. It does not stop a running fault or roll back an experiment.")
+
+# =========================================================
+# AI EXPERIMENT PLANNER
+# =========================================================
+
+st.divider()
+st.subheader("🤖 AI experiment planner")
+st.caption("The planner reads the dependency map, baseline and previous runs, and ranks experiments with a reason. "
+           "Every proposal is checked by deterministic code (allowlist, fault type, 5–30 s). "
+           "The AI never executes anything: a proposal runs only when you press Run.")
+
+if mode != "API mode":
+    st.info("The planner needs API mode (real backend).")
+else:
+    if st.button("🧠 Generate ranked plan", type="primary"):
+        with st.spinner("Planning… (an LLM call can take up to a minute)"):
+            code, body = api_post("/planner/plan", timeout=150)
+        if code != 200:
+            st.error(f"Planner failed: HTTP {code} {body}")
+    try:
+        plan = api_get("/planner/latest")
+    except requests.RequestException:
+        plan = {}
+    if plan.get("experiments"):
+        is_ai = str(plan.get("planner", "")).startswith("AI")
+        label = f"Planner: **{plan['planner']}**" + (f" · model `{plan.get('model')}`" if is_ai else "")
+        if is_ai:
+            st.success(label)
+        else:
+            st.warning(label)
+        if plan.get("llm_error"):
+            st.caption(f"LLM not used: {plan['llm_error']}")
+        df = pd.DataFrame([{"rank": e["rank"], "target": e["target"], "fault": e["fault_type"],
+                            "duration_s": e["duration_seconds"], "reason": e["reason"],
+                            "hypothesis": e["hypothesis"], "expected_impact": e.get("expected_impact", "")}
+                           for e in plan["experiments"]])
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        if plan.get("rejected"):
+            with st.expander(f"⚠️ {len(plan['rejected'])} proposal(s) rejected by the safety validator"):
+                st.dataframe(pd.DataFrame([{"proposal": json.dumps(r["proposal"])[:200], "reasons": "; ".join(r["reasons"])}
+                                           for r in plan["rejected"]]), use_container_width=True, hide_index=True)
+        rc1, rc2 = st.columns([1, 2])
+        with rc1:
+            pick = st.selectbox("Proposal to run", [e["rank"] for e in plan["experiments"]],
+                                format_func=lambda r: f"#{r} " + next(f"{e['fault_type']} → {e['target']}"
+                                                                      for e in plan["experiments"] if e["rank"] == r))
+        with rc2:
+            st.write("")
+            confirm_plan = st.checkbox("I approve running this proposal on the sandbox cluster.")
+        if st.button("▶ Run selected proposal", disabled=not confirm_plan):
+            code, body = api_post("/planner/run", {"rank": pick})
+            show_post_result(f"Planner proposal #{pick}", code, body)
+        st.caption(f"Saved plan: `{plan.get('saved_to')}` (includes inputs, raw model output and validation results)")
+    else:
+        st.caption("No plan yet — press Generate.")
 
 # =========================================================
 # 2. EXPERIMENT CONTROL

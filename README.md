@@ -173,6 +173,20 @@ python chaos\api.py                 # window 1: backend on 127.0.0.1:8000
 streamlit run ui\app.py             # window 2: UI on localhost:8501
 ```
 
+### AI experiment planner
+
+`chaos/planner.py` gives an LLM (Anthropic Claude, `claude-sonnet-5-5` by default) the dependency map, the baseline and previous run results, along with the allowed catalog. The model returns ranked JSON proposals, each with a target, fault type, duration, hypothesis, expected impact and reason.
+
+- **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete` only, 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
+- **The AI never executes anything.** A proposal runs only when a human approves it in the UI (`POST /planner/run`). It is re-validated at that point and then goes through `controller.py`.
+- **No API key or unusable output:** the planner falls back to a clearly labelled **rule-based** planner (fan-in plus untested edges). It is never presented as AI.
+- **Evidence:** every plan is saved to `results/plans/plan_<ts>.json`, with the inputs, raw model output and validation result.
+
+```powershell
+$env:ANTHROPIC_API_KEY = "<your key>"    # set in the shell only; never commit it
+python chaos\planner.py                  # CLI, or use the planner section in the UI
+```
+
 ### Live dashboard
 
 `python chaos\dashboard.py` and then open http://127.0.0.1:8090. The dashboard is read-only. It shows the live error rate, P95 latency, the probe timeline with fault, restore, Kubernetes-ready and user-recovery markers, per-deployment readiness, the run event log and run history, and warnings for a present kill switch or an unrecovered fault.
