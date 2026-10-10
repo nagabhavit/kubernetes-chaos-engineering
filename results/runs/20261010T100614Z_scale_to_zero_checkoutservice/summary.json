@@ -1,0 +1,36 @@
+{
+  "run_id": "20261010T100614Z_scale_to_zero_checkoutservice",
+  "request": {
+    "target": "checkoutservice",
+    "fault": "scale_to_zero",
+    "duration": 15,
+    "max_error_rate": 0.2,
+    "max_p95_ms": 1000.0,
+    "window": 5.0,
+    "min_samples": 5,
+    "baseline": 15.0,
+    "post": 30.0,
+    "recovery_timeout": 120.0,
+    "recovery_streak": 5,
+    "probe_interval": 0.25,
+    "probe_timeout": 2.0,
+    "url": "http://localhost:8080",
+    "load_users": 0,
+    "label": "random: random real experiment"
+  },
+  "context": "kind-boutique-chaos",
+  "namespace": "boutique",
+  "max_duration_cap_s": 60,
+  "target_image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/checkoutservice:v0.10.7",
+  "original_replicas": 1,
+  "git_revision": "db58035b",
+  "status": "CANCELLED",
+  "cleanup": "not_needed",
+  "fault_injected_at": null,
+  "restore_issued_at": null,
+  "fault_duration_s": null,
+  "recovery": {
+    "verified": false
+  },
+  "finished": "2026-10-10T10:06:27.780Z"
+}

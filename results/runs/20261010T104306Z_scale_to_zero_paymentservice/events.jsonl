@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T10:43:06.653Z", "event": "run_started", "run_id": "20261010T104306Z_scale_to_zero_paymentservice", "target": "paymentservice", "fault": "scale_to_zero", "duration": 15}
+{"ts": "2026-10-10T10:43:07.043Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/paymentservice:v0.10.7"}

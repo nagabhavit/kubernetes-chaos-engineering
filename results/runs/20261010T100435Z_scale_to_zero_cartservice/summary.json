@@ -1,0 +1,63 @@
+{
+  "run_id": "20261010T100435Z_scale_to_zero_cartservice",
+  "request": {
+    "target": "cartservice",
+    "fault": "scale_to_zero",
+    "duration": 15,
+    "max_error_rate": 0.2,
+    "max_p95_ms": 1000.0,
+    "window": 5.0,
+    "min_samples": 5,
+    "baseline": 15.0,
+    "post": 30.0,
+    "recovery_timeout": 120.0,
+    "recovery_streak": 5,
+    "probe_interval": 0.25,
+    "probe_timeout": 2.0,
+    "url": "http://localhost:8080",
+    "load_users": 0,
+    "label": "random: random real experiment"
+  },
+  "context": "kind-boutique-chaos",
+  "namespace": "boutique",
+  "max_duration_cap_s": 60,
+  "target_image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/cartservice:v0.10.7",
+  "original_replicas": 1,
+  "git_revision": "db58035b",
+  "baseline_window": {
+    "n": 58,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p95_ms": 101.9,
+    "consecutive_conn_errors": 0,
+    "last_sample_age_s": 0.1268482208251953
+  },
+  "post_window": {
+    "n": 117,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p95_ms": 201.2,
+    "consecutive_conn_errors": 0,
+    "last_sample_age_s": 0.08635854721069336
+  },
+  "fault_window": {
+    "n": 6,
+    "errors": 4,
+    "error_rate": 0.6666666666666666,
+    "p95_ms": 104.1
+  },
+  "first_error_after_inject_s": 0.64,
+  "status": "ABORTED_THRESHOLD",
+  "cleanup": "ok",
+  "fault_injected_at": "2026-10-10T10:04:51.093Z",
+  "restore_issued_at": "2026-10-10T10:04:52.731Z",
+  "fault_duration_s": 1.64,
+  "recovery": {
+    "verified": true,
+    "k8s_rollout_ok": true,
+    "k8s_ready_s": 32.06,
+    "user_recovery_s": 48.16,
+    "recovered_at": "2026-10-10T10:05:40.895Z"
+  },
+  "finished": "2026-10-10T10:06:12.309Z"
+}

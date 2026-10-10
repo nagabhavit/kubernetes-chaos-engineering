@@ -1,0 +1,4 @@
+{"ts": "2026-10-10T10:06:14.500Z", "event": "run_started", "run_id": "20261010T100614Z_scale_to_zero_checkoutservice", "target": "checkoutservice", "fault": "scale_to_zero", "duration": 15}
+{"ts": "2026-10-10T10:06:14.939Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/checkoutservice:v0.10.7"}
+{"ts": "2026-10-10T10:06:27.779Z", "event": "kill_switch", "source": "kill file"}
+{"ts": "2026-10-10T10:06:27.781Z", "event": "run_finished", "status": "CANCELLED", "cleanup": "not_needed", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T100614Z_scale_to_zero_checkoutservice\\summary.json"}

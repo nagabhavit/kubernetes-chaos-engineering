@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T10:04:35.525Z", "event": "run_started", "run_id": "20261010T100435Z_scale_to_zero_cartservice", "target": "cartservice", "fault": "scale_to_zero", "duration": 15}
+{"ts": "2026-10-10T10:04:35.989Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/cartservice:v0.10.7"}
+{"ts": "2026-10-10T10:04:51.091Z", "event": "baseline", "n": 58, "errors": 0, "error_rate": 0.0, "p95_ms": 101.9, "consecutive_conn_errors": 0, "last_sample_age_s": 0.1268482208251953}
+{"ts": "2026-10-10T10:04:51.326Z", "event": "fault_injected", "target": "cartservice", "replicas": 0, "at": "2026-10-10T10:04:51.093Z"}
+{"ts": "2026-10-10T10:04:52.730Z", "event": "threshold_breach", "metric": "error_rate", "value": 0.211, "limit": 0.2, "n": 19, "errors": 4, "error_rate": 0.21052631578947367, "p95_ms": 110.2, "consecutive_conn_errors": 0, "last_sample_age_s": 0.20843505859375}
+{"ts": "2026-10-10T10:04:52.913Z", "event": "restore_ok", "target": "cartservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T10:05:24.791Z", "event": "rollout_status", "ok": true, "out": "Waiting for deployment \"cartservice\" rollout to finish: 0 of 1 updated replicas are available...\ndeployment \"cartservice\" successfully rolled out"}
+{"ts": "2026-10-10T10:05:42.306Z", "event": "recovered", "user_recovery_s": 48.16}
+{"ts": "2026-10-10T10:06:12.307Z", "event": "post_window", "n": 117, "errors": 0, "error_rate": 0.0, "p95_ms": 201.2, "consecutive_conn_errors": 0, "last_sample_age_s": 0.08635854721069336}
+{"ts": "2026-10-10T10:06:12.310Z", "event": "run_finished", "status": "ABORTED_THRESHOLD", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T100435Z_scale_to_zero_cartservice\\summary.json"}
