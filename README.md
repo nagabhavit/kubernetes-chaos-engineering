@@ -1,6 +1,45 @@
 ﻿# Kubernetes Chaos Engineering — Online Boutique
 
 ## Overview
+## Architecture
+
+The experiment uses a local Kubernetes environment to evaluate application behavior during a controlled service disruption.
+
+```text
+Locust Load Generator
+        |
+        v
+Frontend Service
+        |
+        v
+Online Boutique Microservices
+        |
+        v
+Product Catalog Service
+        ^
+        |
+Controlled Fault Injection
+(scale deployment to zero, then restore)
+        |
+        v
+Kubernetes Recovery
+
+Locust CSV Reports
+        |
+        v
+Python + Matplotlib
+        |
+        v
+Performance Timeline Chart
+```
+
+**Experiment workflow**
+1. Deploy Online Boutique to a local Kind cluster.
+2. Generate baseline traffic with Locust.
+3. Run a second load test while scaling `productcatalogservice` down and restoring it.
+4. Collect request statistics, failures, and response-time history.
+5. Visualize the recorded performance data with Matplotlib.
+
 This project evaluates the resilience of Google Cloud Platform's Online Boutique microservices demo running locally on Kubernetes using Kind.
 
 The application is deployed in a local Kubernetes cluster, and Locust generates HTTP traffic while service failures are introduced.
