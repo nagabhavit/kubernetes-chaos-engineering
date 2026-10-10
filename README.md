@@ -98,6 +98,65 @@ The experiment coincided with the service scale-down and restoration. Individual
 
 The `productcatalogservice` deployment subsequently rolled out successfully, and the application pods were observed in the `Running` and ready state.
 
+## Day 1: Safety-Controlled Experiments
+
+Failures are injected by `chaos/controller.py`. It does not take shell commands; it only runs one approved fault on one allowlisted deployment.
+
+### Safety controls
+
+| Control | Implementation |
+|---|---|
+| Scope lock | Fixed context `kind-boutique-chaos`, namespace `boutique`; probe URL must be localhost |
+| Target allowlist | 10 backend deployments; `frontend` (telemetry path) and `loadgenerator` are refused |
+| Fault allowlist | `scale_to_zero` only (reversible) |
+| Duration cap | Hard maximum 60 s, not overridable |
+| Preflight gate | Refuses to run unless every deployment is ready, no previous fault is pending and the kill switch is clear |
+| Baseline gate | 15 s of healthy probes required before injecting |
+| Automatic abort | Restores immediately if probe error rate > 20 % or P95 > 1000 ms over a 5 s window, or if telemetry is lost |
+| Kill switch | Create `chaos/KILL`, or press Ctrl+C |
+| Guaranteed cleanup | `try/finally` restores the **original** replica count; Ctrl+C is ignored during cleanup; 3 retries |
+| Crash recovery | State file `chaos/state/active_fault.json` + `chaos/restore.py` undo a fault if the controller dies |
+| Recovery check | `kubectl rollout status` **and** 5 consecutive successful user requests |
+| Evidence | `results/runs/<run_id>/` holds `events.jsonl`, `probes.csv`, `summary.json`, Locust CSVs and `timeline.png` (UTF-8, UTC) |
+
+Rejected requests are logged to `results/runs/rejected.jsonl`.
+
+### Day-1 runs (measured)
+
+| Run | Target | Outcome | Fault duration | User errors during fault | K8s ready after restore | Users recovered after restore |
+|---|---|---|---|---|---|---|
+| `20261010T090605Z` | productcatalogservice | **Auto-abort** (error rate 23 % > 20 %) | 3.05 s | 3 of 5 probes | 4.1 s | **20.4 s** |
+| `20261010T091112Z` | adservice | Completed at 60 s cap | 60.1 s | 0 of 232 probes | 63.7 s | no user impact |
+| `20261010T091455Z` | adservice | **Kill switch** (`chaos/KILL`) | 10.1 s | 0 of 39 probes | 47.1 s | no user impact |
+| rejected | frontend / 600 s duration | Refused before touching the cluster | — | — | — | — |
+
+The probe sends sequential HTTP requests to `/`, `/product/OLJCESPC7Z` and `/cart` every 0.25 s, with a 2 s timeout. Locust load ran in parallel for the auto-abort run.
+
+![Auto-abort run timeline](results/runs/20261010T090605Z_scale_to_zero_productcatalogservice/timeline.png)
+
+### Initial findings
+
+1. **Readiness does not equal user recovery (productcatalogservice).** Kubernetes reported the pod ready 4.1 s after restore, but users kept receiving HTTP 500s until 20.4 s after restore. A 3 s fault produced about 23 s of user-facing outage. *Hypothesis (not yet verified):* the frontend's gRPC connection to the catalog does not reconnect immediately.
+2. **The product catalog is a single point of failure.** With one replica, its loss breaks `/`, product pages, `/cart`, `/setCurrency` and checkout within 1 s.
+3. **The ad service degrades gracefully but restarts slowly.** It caused 0 user errors while down, but took 47–64 s to become ready again.
+4. **Detection latency.** The auto-abort fired 3.05 s after injection, because a hung `/cart` probe (2 s timeout) blocked the sequential prober. The first error was seen at 0.7 s.
+
+### Dependency map
+
+`architecture/build_dependency_map.py` discovers services and `*_ADDR` dependencies from the live cluster and merges experiment evidence from `architecture/observations.json`. See [architecture/dependency-map.md](architecture/dependency-map.md). It also flags that the frontend is configured to call `shoppingassistantservice`, which is not deployed.
+
+### Running the controller
+
+```powershell
+.\.venv313\Scripts\Activate.ps1
+python chaos\controller.py --target productcatalogservice --duration 45 --load-users 10   # auto-abort demo
+python chaos\controller.py --target adservice --duration 60                              # then: New-Item chaos\KILL
+Remove-Item chaos\KILL                                                                   # re-arm
+python chaos\restore.py                                                                  # emergency undo
+python chaos\plot_run.py results\runs\<run_id>                                           # timeline chart
+python architecture\build_dependency_map.py                                              # dependency map
+```
+
 ## Results and Visualization
 
 The `results/` directory contains the Locust reports and generated chart.

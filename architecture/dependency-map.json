@@ -1,0 +1,299 @@
+{
+  "generated": "2026-10-10T09:18:34+00:00",
+  "context": "kind-boutique-chaos",
+  "namespace": "boutique",
+  "services": {
+    "adservice": {
+      "replicas": 1,
+      "image": "adservice:v0.10.7",
+      "ports": [
+        9555
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "cartservice": {
+      "replicas": 1,
+      "image": "cartservice:v0.10.7",
+      "ports": [
+        7070
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "checkoutservice": {
+      "replicas": 1,
+      "image": "checkoutservice:v0.10.7",
+      "ports": [
+        5050
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "currencyservice": {
+      "replicas": 1,
+      "image": "currencyservice:v0.10.7",
+      "ports": [
+        7000
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "emailservice": {
+      "replicas": 1,
+      "image": "emailservice:v0.10.7",
+      "ports": [
+        8080
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "frontend": {
+      "replicas": 1,
+      "image": "frontend:v0.10.7",
+      "ports": [
+        8080
+      ],
+      "has_service": true,
+      "role": "entry point"
+    },
+    "loadgenerator": {
+      "replicas": 0,
+      "image": "loadgenerator:v0.10.7",
+      "ports": [],
+      "has_service": false,
+      "role": "load generator (not part of app)"
+    },
+    "paymentservice": {
+      "replicas": 1,
+      "image": "paymentservice:v0.10.7",
+      "ports": [
+        50051
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "productcatalogservice": {
+      "replicas": 1,
+      "image": "productcatalogservice:v0.10.7",
+      "ports": [
+        3550
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "recommendationservice": {
+      "replicas": 1,
+      "image": "recommendationservice:v0.10.7",
+      "ports": [
+        8080
+      ],
+      "has_service": true,
+      "role": "backend"
+    },
+    "redis-cart": {
+      "replicas": 1,
+      "image": "redis:alpine",
+      "ports": [
+        6379
+      ],
+      "has_service": true,
+      "role": "datastore"
+    },
+    "shippingservice": {
+      "replicas": 1,
+      "image": "shippingservice:v0.10.7",
+      "ports": [
+        50051
+      ],
+      "has_service": true,
+      "role": "backend"
+    }
+  },
+  "edges": [
+    {
+      "from": "cartservice",
+      "to": "redis-cart",
+      "port": "6379",
+      "env": "REDIS_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "productcatalogservice",
+      "port": "3550",
+      "env": "PRODUCT_CATALOG_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "shippingservice",
+      "port": "50051",
+      "env": "SHIPPING_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "paymentservice",
+      "port": "50051",
+      "env": "PAYMENT_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "emailservice",
+      "port": "5000",
+      "env": "EMAIL_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "currencyservice",
+      "port": "7000",
+      "env": "CURRENCY_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "checkoutservice",
+      "to": "cartservice",
+      "port": "7070",
+      "env": "CART_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "productcatalogservice",
+      "port": "3550",
+      "env": "PRODUCT_CATALOG_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": true,
+      "criticality": "critical",
+      "verified_by": [
+        "chaos5 (manual)",
+        "20261010T090605Z_scale_to_zero_productcatalogservice"
+      ],
+      "observed": "Scaling productcatalogservice to 0 caused HTTP 500 on /, /product/*, /cart, /setCurrency and /cart/checkout within 0.7-1 s; /cart probes hung >2 s. In run 090605Z Kubernetes reported ready 4.1 s after restore but users kept getting 500s until 20.4 s after restore."
+    },
+    {
+      "from": "frontend",
+      "to": "currencyservice",
+      "port": "7000",
+      "env": "CURRENCY_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "cartservice",
+      "port": "7070",
+      "env": "CART_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "recommendationservice",
+      "port": "8080",
+      "env": "RECOMMENDATION_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "shippingservice",
+      "port": "50051",
+      "env": "SHIPPING_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "checkoutservice",
+      "port": "5050",
+      "env": "CHECKOUT_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "frontend",
+      "to": "adservice",
+      "port": "9555",
+      "env": "AD_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": true,
+      "criticality": "non-critical (graceful degradation)",
+      "verified_by": [
+        "20261010T091112Z_scale_to_zero_adservice"
+      ],
+      "observed": "adservice at 0 replicas for 60.1 s: 0 errors in 232 probes during the fault window. After restore, Kubernetes took 63.7 s to report it ready."
+    },
+    {
+      "from": "frontend",
+      "to": "shoppingassistantservice",
+      "port": "80",
+      "env": "SHOPPING_ASSISTANT_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": false,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "loadgenerator",
+      "to": "frontend",
+      "port": "80",
+      "env": "FRONTEND_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    },
+    {
+      "from": "recommendationservice",
+      "to": "productcatalogservice",
+      "port": "3550",
+      "env": "PRODUCT_CATALOG_SERVICE_ADDR",
+      "evidence": "configured (env var in live Deployment)",
+      "target_deployed": true,
+      "verified": false,
+      "criticality": "unknown (not yet tested)"
+    }
+  ],
+  "external_entry": {
+    "from": "user / Locust",
+    "to": "frontend",
+    "via": "kubectl port-forward localhost:8080 -> frontend:80"
+  }
+}

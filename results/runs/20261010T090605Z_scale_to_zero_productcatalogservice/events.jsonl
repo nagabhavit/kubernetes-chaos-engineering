@@ -1,0 +1,12 @@
+{"ts": "2026-10-10T09:06:05.339Z", "event": "run_started", "run_id": "20261010T090605Z_scale_to_zero_productcatalogservice", "target": "productcatalogservice", "fault": "scale_to_zero", "duration": 45}
+{"ts": "2026-10-10T09:06:05.678Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7"}
+{"ts": "2026-10-10T09:06:05.741Z", "event": "load_started", "users": 10, "max_run_time_s": 220}
+{"ts": "2026-10-10T09:06:20.785Z", "event": "baseline", "n": 51, "errors": 0, "error_rate": 0.0, "p95_ms": 384.0, "consecutive_conn_errors": 0, "last_sample_age_s": 0.31152939796447754}
+{"ts": "2026-10-10T09:06:21.231Z", "event": "fault_injected", "target": "productcatalogservice", "replicas": 0, "at": "2026-10-10T09:06:20.793Z"}
+{"ts": "2026-10-10T09:06:23.844Z", "event": "threshold_breach", "metric": "error_rate", "value": 0.231, "limit": 0.2, "n": 13, "errors": 3, "error_rate": 0.23076923076923078, "p95_ms": 2017.1, "consecutive_conn_errors": 0, "last_sample_age_s": 0.08075475692749023}
+{"ts": "2026-10-10T09:06:24.258Z", "event": "restore_ok", "target": "productcatalogservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T09:06:27.990Z", "event": "rollout_status", "ok": true, "out": "Waiting for deployment \"productcatalogservice\" rollout to finish: 0 of 1 updated replicas are available...\ndeployment \"productcatalogservice\" successfully rolled out"}
+{"ts": "2026-10-10T09:06:45.508Z", "event": "recovered", "user_recovery_s": 20.41}
+{"ts": "2026-10-10T09:07:15.511Z", "event": "post_window", "n": 107, "errors": 0, "error_rate": 0.0, "p95_ms": 374.5, "consecutive_conn_errors": 0, "last_sample_age_s": 0.16910767555236816}
+{"ts": "2026-10-10T09:07:15.519Z", "event": "load_stopped"}
+{"ts": "2026-10-10T09:07:15.526Z", "event": "run_finished", "status": "ABORTED_THRESHOLD", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T090605Z_scale_to_zero_productcatalogservice\\summary.json"}

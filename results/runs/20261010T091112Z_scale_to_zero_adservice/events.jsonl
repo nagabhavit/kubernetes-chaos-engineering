@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T09:11:12.866Z", "event": "run_started", "run_id": "20261010T091112Z_scale_to_zero_adservice", "target": "adservice", "fault": "scale_to_zero", "duration": 60}
+{"ts": "2026-10-10T09:11:13.179Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/adservice:v0.10.7"}
+{"ts": "2026-10-10T09:11:28.277Z", "event": "baseline", "n": 56, "errors": 0, "error_rate": 0.0, "p95_ms": 207.5, "consecutive_conn_errors": 0, "last_sample_age_s": 0.3521571159362793}
+{"ts": "2026-10-10T09:11:28.708Z", "event": "fault_injected", "target": "adservice", "replicas": 0, "at": "2026-10-10T09:11:28.282Z"}
+{"ts": "2026-10-10T09:12:28.380Z", "event": "duration_cap_reached", "elapsed_s": 60.1}
+{"ts": "2026-10-10T09:12:28.696Z", "event": "restore_ok", "target": "adservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T09:13:32.045Z", "event": "rollout_status", "ok": true, "out": "Waiting for deployment \"adservice\" rollout to finish: 0 of 1 updated replicas are available...\ndeployment \"adservice\" successfully rolled out"}
+{"ts": "2026-10-10T09:13:32.048Z", "event": "recovered", "user_recovery_s": 0.01}
+{"ts": "2026-10-10T09:14:02.051Z", "event": "post_window", "n": 116, "errors": 0, "error_rate": 0.0, "p95_ms": 168.5, "consecutive_conn_errors": 0, "last_sample_age_s": 0.2911641597747803}
+{"ts": "2026-10-10T09:14:02.131Z", "event": "run_finished", "status": "COMPLETED", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T091112Z_scale_to_zero_adservice\\summary.json"}

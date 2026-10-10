@@ -1,0 +1,14 @@
+[
+  {
+    "edge": "frontend->productcatalogservice",
+    "criticality": "critical",
+    "runs": ["chaos5 (manual)", "20261010T090605Z_scale_to_zero_productcatalogservice"],
+    "observed": "Scaling productcatalogservice to 0 caused HTTP 500 on /, /product/*, /cart, /setCurrency and /cart/checkout within 0.7-1 s; /cart probes hung >2 s. In run 090605Z Kubernetes reported ready 4.1 s after restore but users kept getting 500s until 20.4 s after restore."
+  },
+  {
+    "edge": "frontend->adservice",
+    "criticality": "non-critical (graceful degradation)",
+    "runs": ["20261010T091112Z_scale_to_zero_adservice"],
+    "observed": "adservice at 0 replicas for 60.1 s: 0 errors in 232 probes during the fault window. After restore, Kubernetes took 63.7 s to report it ready."
+  }
+]
