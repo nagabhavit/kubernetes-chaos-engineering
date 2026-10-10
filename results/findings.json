@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-10T18:11:46+00:00",
+  "generated": "2026-10-10T18:37:22+00:00",
   "run_count": 12,
   "groups": [
     {
@@ -219,10 +219,10 @@
         "20261010T175308Z_scale_to_zero_productcatalogservice"
       ],
       "rank": 1,
-      "likely_cause": "Users are experiencing failures after productcatalogservice is Ready, likely due to the high gap time between Ready and user recovery.",
-      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the gap time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The frontend's gRPC client likely waits in reconnect backoff after the dependency returns, so requests keep failing after the new pod is Ready.",
+      "recommended_fix": "Run 2+ replicas so a restart never removes every endpoint; set gRPC keepalive and a lower maximum reconnect backoff in the frontend; retry idempotent reads with a short timeout.",
+      "verification_experiment": "Repeat the same outage with 2 replicas (or tuned backoff) and compare user recovery time.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F2",
@@ -259,10 +259,10 @@
         "20261010T175308Z_scale_to_zero_productcatalogservice"
       ],
       "rank": 2,
-      "likely_cause": "productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.",
-      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The productcatalogservice is likely a single point of failure due to its hard dependency on other services. This is because the median error rate in fault is 0.67, indicating that the service is prone to errors. Additionally, the median first error time is 0.42 seconds, suggesting that the service is not recovering quickly from errors.",
+      "recommended_fix": "Implement circuit breakers or other error handling mechanisms to detect and prevent cascading failures in the productcatalogservice. This could involve adding additional logging or monitoring to detect errors earlier.",
+      "verification_experiment": "Verify that the median error rate in fault is reduced to 0.01 after implementing circuit breakers or other error handling mechanisms.",
+      "text_source": "AI: local Ollama (analysis model) (llama3.2:3b)"
     },
     {
       "id": "F5",
@@ -293,10 +293,10 @@
         "20261010T100435Z_scale_to_zero_cartservice"
       ],
       "rank": 3,
-      "likely_cause": "Users are experiencing failures after cartservice is Ready, likely due to the high gap time between Ready and user recovery.",
-      "recommended_fix": "Increase the number of replicas for cartservice to reduce the gap time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The frontend's gRPC client likely waits in reconnect backoff after the dependency returns, so requests keep failing after the new pod is Ready.",
+      "recommended_fix": "Run 2+ replicas so a restart never removes every endpoint; set gRPC keepalive and a lower maximum reconnect backoff in the frontend; retry idempotent reads with a short timeout.",
+      "verification_experiment": "Repeat the same outage with 2 replicas (or tuned backoff) and compare user recovery time.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F6",
@@ -328,10 +328,10 @@
         "20261010T100435Z_scale_to_zero_cartservice"
       ],
       "rank": 4,
-      "likely_cause": "cartservice is a single point of failure, likely due to its high error rate and short recovery time.",
-      "recommended_fix": "Increase the number of replicas for cartservice to reduce the error rate and recovery time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The cartservice is likely a single point of failure due to its hard dependency on other services. This is because the median error rate in fault is 0.67, indicating that the service is prone to errors. Additionally, the median first error time is 0.64 seconds, suggesting that the service is not recovering quickly from errors.",
+      "recommended_fix": "Implement circuit breakers or other error handling mechanisms to detect and prevent cascading failures in the cartservice. This could involve adding additional logging or monitoring to detect errors earlier.",
+      "verification_experiment": "Verify that the median error rate in fault is reduced to 0.01 after implementing circuit breakers or other error handling mechanisms.",
+      "text_source": "AI: local Ollama (analysis model) (llama3.2:3b)"
     },
     {
       "id": "F7",
@@ -360,10 +360,10 @@
         "20261010T100435Z_scale_to_zero_cartservice"
       ],
       "rank": 5,
-      "likely_cause": "cartservice takes a long time to become Ready, likely due to its high initial readiness time.",
-      "recommended_fix": "Increase the number of replicas for cartservice to reduce the initial readiness time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "Container start-up and readiness checks take a long time for this service.",
+      "recommended_fix": "Shorten start-up (image/runtime tuning, readiness probe timing) or keep 2+ replicas so a restart is invisible to users.",
+      "verification_experiment": "Measure ready time again after tuning the readiness probe.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F9",
@@ -395,10 +395,10 @@
         "20261010T175626Z_pod_delete_productcatalogservice"
       ],
       "rank": 6,
-      "likely_cause": "productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.",
-      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "With a single replica and no fallback, every request that needs this service fails.",
+      "recommended_fix": "Run 2+ replicas with a PodDisruptionBudget (minAvailable: 1); let the frontend degrade (cached or partial page) instead of returning HTTP 500.",
+      "verification_experiment": "Repeat the outage with 2 replicas; expect a near-zero error rate.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F11",
@@ -433,10 +433,10 @@
         "20261010T175308Z_scale_to_zero_productcatalogservice"
       ],
       "rank": 7,
-      "likely_cause": "Auto-abort fires after the first error, likely due to the high error rate and short recovery time.",
-      "recommended_fix": "Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The productcatalogservice is likely experiencing a short delay between the first error and the auto-abort, causing the application to become unresponsive. This is because the median first error time is 0.42 seconds, which is close to the median time for the auto-abort to occur (2.83 seconds).",
+      "recommended_fix": "Optimize the auto-abort process to reduce the delay between the first error and the auto-abort. This could involve adding additional logging or monitoring to detect issues earlier.",
+      "verification_experiment": "Verify that the median delay between the first error and the auto-abort is reduced to 1 second after optimizing the auto-abort process.",
+      "text_source": "AI: local Ollama (analysis model) (llama3.2:3b)"
     },
     {
       "id": "F8",
@@ -461,10 +461,10 @@
         "20261010T104306Z_scale_to_zero_paymentservice"
       ],
       "rank": 8,
-      "likely_cause": "paymentservice outage is not visible to the probe, likely due to the untested path.",
-      "recommended_fix": "Test the paymentservice outage path to ensure visibility.",
-      "verification_experiment": "Run a stress test with the paymentservice outage path to confirm visibility.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The paymentservice is not visible to the probe, causing the application to become unresponsive. This is because the median error rate in fault is 0.0, indicating that the service is not failing. However, this may be due to the probe not detecting issues correctly.",
+      "recommended_fix": "Verify that the probe is correctly detecting issues in the paymentservice. This could involve adding additional logging or monitoring to detect issues earlier.",
+      "verification_experiment": "Verify that the median error rate in fault is 0.01 after verifying that the probe is correctly detecting issues in the paymentservice.",
+      "text_source": "AI: local Ollama (analysis model) (llama3.2:3b)"
     },
     {
       "id": "F3",
@@ -490,10 +490,10 @@
         "20261010T091455Z_scale_to_zero_adservice"
       ],
       "rank": 9,
-      "likely_cause": "adservice takes a long time to become Ready, likely due to its high initial readiness time.",
-      "recommended_fix": "Increase the number of replicas for adservice to reduce the initial readiness time.",
-      "verification_experiment": "Run a stress test with increased replicas to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "Container start-up and readiness checks take a long time for this service.",
+      "recommended_fix": "Shorten start-up (image/runtime tuning, readiness probe timing) or keep 2+ replicas so a restart is invisible to users.",
+      "verification_experiment": "Measure ready time again after tuning the readiness probe.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F10",
@@ -520,10 +520,10 @@
         "20261010T175803Z_traffic_spike_frontend"
       ],
       "rank": 10,
-      "likely_cause": "There is a traffic spike, likely due to the high P95 latency.",
-      "recommended_fix": "Monitor and adjust the traffic to reduce the P95 latency.",
-      "verification_experiment": "Run a stress test with reduced traffic to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "Added delay propagates to user-facing pages because calls are synchronous and have no timeout budget or cache.",
+      "recommended_fix": "Set client timeouts and retries with deadlines, cache read-mostly data, and add an HPA and resource requests for load spikes.",
+      "verification_experiment": "Repeat with the fix and compare P95 against the baseline.",
+      "text_source": "template (AI text rejected: unverified number)"
     },
     {
       "id": "F4",
@@ -550,10 +550,10 @@
         "20261010T091455Z_scale_to_zero_adservice"
       ],
       "rank": 11,
-      "likely_cause": "Frontend can degrade gracefully without adservice, likely due to the absence of adservice.",
-      "recommended_fix": "Ensure adservice is always available to prevent degradations.",
-      "verification_experiment": "Monitor the frontend for degradations without adservice to confirm the fix.",
-      "text_source": "AI: local Ollama (planner model) (qwen2.5:3b)"
+      "likely_cause": "The frontend is degrading gracefully without the adservice, causing the application to become unresponsive. This is because the median error rate in fault is 0.0, indicating that the service is not failing. However, this may be due to the adservice not being properly configured.",
+      "recommended_fix": "Verify that the adservice is properly configured to detect and prevent issues in the frontend. This could involve adding additional logging or monitoring to detect issues earlier.",
+      "verification_experiment": "Verify that the median error rate in fault is 0.01 after verifying that the adservice is properly configured to detect and prevent issues in the frontend.",
+      "text_source": "AI: local Ollama (analysis model) (llama3.2:3b)"
     }
   ],
   "resilience": {
@@ -599,11 +599,9 @@
     "formula": "severity (0-100) = 40 x error rate during fault + 20 x (affected routes / 3 probed routes) + 25 x min(1, user-facing outage s / 60) + 5 x min(1, Kubernetes-ready s / 120) + 10 x min(1, extra P95 ms over baseline / 1000); outage = fault duration + user recovery. priority = severity x confidence weight (high 1.0, medium 0.85, single run 0.7). Resilience score per experiment = 100 - severity; overall = mean over tested experiments."
   },
   "narrative": {
-    "used": "local Ollama (planner model)",
-    "model": "qwen2.5:3b",
-    "errors": [
-      "llama3.2:3b: not pulled"
-    ]
+    "used": "local Ollama (analysis model)",
+    "model": "llama3.2:3b",
+    "errors": []
   },
   "latency_lab": [
     {

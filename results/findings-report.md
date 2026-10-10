@@ -1,10 +1,10 @@
 # Findings Report: Online Boutique (local kind sandbox)
 
-Generated 2026-10-10T18:11:46+00:00 by `chaos/analyze.py` from **12 controller runs** (6 distinct experiments; fault types: pod_delete, scale_to_zero, traffic_spike), plus 3 network-latency lab runs (separate section).
+Generated 2026-10-10T18:37:22+00:00 by `chaos/analyze.py` from **12 controller runs** (6 distinct experiments; fault types: pod_delete, scale_to_zero, traffic_spike), plus 3 network-latency lab runs (separate section).
 
 **How to read this report:** *Observed facts* are computed by code from `results/runs/*`. *Likely cause* is a hypothesis. *Recommended fix* and *verification experiment* are proposals.
 
-**Narrative written by:** local Ollama (planner model) (`qwen2.5:3b`). Not used: llama3.2:3b: not pulled
+**Narrative written by:** local Ollama (analysis model) (`llama3.2:3b`)
 
 ## Resilience score (team-defined heuristic, not an industry standard)
 
@@ -38,13 +38,13 @@ Method: severity (0-100) = 40 x error rate during fault + 20 x (affected routes 
 
 Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_scale_to_zero_productcatalogservice`, `20261010T095507Z_scale_to_zero_productcatalogservice`, `20261010T095627Z_scale_to_zero_productcatalogservice`, `20261010T104422Z_scale_to_zero_productcatalogservice`, `20261010T175308Z_scale_to_zero_productcatalogservice`
 
-**Likely cause (hypothesis):** Users are experiencing failures after productcatalogservice is Ready, likely due to the high gap time between Ready and user recovery.
+**Likely cause (hypothesis):** The frontend's gRPC client likely waits in reconnect backoff after the dependency returns, so requests keep failing after the new pod is Ready.
 
-**Recommended fix:** Increase the number of replicas for productcatalogservice to reduce the gap time.
+**Recommended fix:** Run 2+ replicas so a restart never removes every endpoint; set gRPC keepalive and a lower maximum reconnect backoff in the frontend; retry idempotent reads with a short timeout.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Repeat the same outage with 2 replicas (or tuned backoff) and compare user recovery time.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 2. [High · severity 66.0 · priority 66.0] productcatalogservice is a hard dependency / single point of failure (scale to zero)
 
@@ -62,13 +62,13 @@ Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_
 
 Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_scale_to_zero_productcatalogservice`, `20261010T095507Z_scale_to_zero_productcatalogservice`, `20261010T095627Z_scale_to_zero_productcatalogservice`, `20261010T104422Z_scale_to_zero_productcatalogservice`, `20261010T175308Z_scale_to_zero_productcatalogservice`
 
-**Likely cause (hypothesis):** productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.
+**Likely cause (hypothesis):** The productcatalogservice is likely a single point of failure due to its hard dependency on other services. This is because the median error rate in fault is 0.67, indicating that the service is prone to errors. Additionally, the median first error time is 0.42 seconds, suggesting that the service is not recovering quickly from errors.
 
-**Recommended fix:** Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.
+**Recommended fix:** Implement circuit breakers or other error handling mechanisms to detect and prevent cascading failures in the productcatalogservice. This could involve adding additional logging or monitoring to detect errors earlier.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Verify that the median error rate in fault is reduced to 0.01 after implementing circuit breakers or other error handling mechanisms.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: AI: local Ollama (analysis model) (llama3.2:3b)</sub>
 
 ### 3. [High · severity 68.9 · priority 48.2] Users keep failing after cartservice is Ready
 
@@ -85,13 +85,13 @@ Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_
 
 Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
-**Likely cause (hypothesis):** Users are experiencing failures after cartservice is Ready, likely due to the high gap time between Ready and user recovery.
+**Likely cause (hypothesis):** The frontend's gRPC client likely waits in reconnect backoff after the dependency returns, so requests keep failing after the new pod is Ready.
 
-**Recommended fix:** Increase the number of replicas for cartservice to reduce the gap time.
+**Recommended fix:** Run 2+ replicas so a restart never removes every endpoint; set gRPC keepalive and a lower maximum reconnect backoff in the frontend; retry idempotent reads with a short timeout.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Repeat the same outage with 2 replicas (or tuned backoff) and compare user recovery time.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 4. [High · severity 68.9 · priority 48.2] cartservice is a hard dependency / single point of failure (scale to zero)
 
@@ -109,13 +109,13 @@ Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
 Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
-**Likely cause (hypothesis):** cartservice is a single point of failure, likely due to its high error rate and short recovery time.
+**Likely cause (hypothesis):** The cartservice is likely a single point of failure due to its hard dependency on other services. This is because the median error rate in fault is 0.67, indicating that the service is prone to errors. Additionally, the median first error time is 0.64 seconds, suggesting that the service is not recovering quickly from errors.
 
-**Recommended fix:** Increase the number of replicas for cartservice to reduce the error rate and recovery time.
+**Recommended fix:** Implement circuit breakers or other error handling mechanisms to detect and prevent cascading failures in the cartservice. This could involve adding additional logging or monitoring to detect errors earlier.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Verify that the median error rate in fault is reduced to 0.01 after implementing circuit breakers or other error handling mechanisms.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: AI: local Ollama (analysis model) (llama3.2:3b)</sub>
 
 ### 5. [High · severity 68.9 · priority 48.2] cartservice takes 32 s to become Ready after restore
 
@@ -130,13 +130,13 @@ Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
 Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
-**Likely cause (hypothesis):** cartservice takes a long time to become Ready, likely due to its high initial readiness time.
+**Likely cause (hypothesis):** Container start-up and readiness checks take a long time for this service.
 
-**Recommended fix:** Increase the number of replicas for cartservice to reduce the initial readiness time.
+**Recommended fix:** Shorten start-up (image/runtime tuning, readiness probe timing) or keep 2+ replicas so a restart is invisible to users.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Measure ready time again after tuning the readiness probe.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 6. [High · severity 66.8 · priority 46.8] productcatalogservice is a hard dependency / single point of failure (pod delete)
 
@@ -154,13 +154,13 @@ Runs: `20261010T100435Z_scale_to_zero_cartservice`
 
 Runs: `20261010T175626Z_pod_delete_productcatalogservice`
 
-**Likely cause (hypothesis):** productcatalogservice is a single point of failure, likely due to its high error rate and short recovery time.
+**Likely cause (hypothesis):** With a single replica and no fallback, every request that needs this service fails.
 
-**Recommended fix:** Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.
+**Recommended fix:** Run 2+ replicas with a PodDisruptionBudget (minAvailable: 1); let the frontend degrade (cached or partial page) instead of returning HTTP 500.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Repeat the outage with 2 replicas; expect a near-zero error rate.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 7. [Low · severity 10.0 · priority 10.0] Auto-abort fires ~2 s after the first error (our tooling)
 
@@ -176,13 +176,13 @@ Runs: `20261010T175626Z_pod_delete_productcatalogservice`
 
 Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_scale_to_zero_productcatalogservice`, `20261010T095507Z_scale_to_zero_productcatalogservice`, `20261010T095627Z_scale_to_zero_productcatalogservice`, `20261010T104422Z_scale_to_zero_productcatalogservice`, `20261010T175308Z_scale_to_zero_productcatalogservice`
 
-**Likely cause (hypothesis):** Auto-abort fires after the first error, likely due to the high error rate and short recovery time.
+**Likely cause (hypothesis):** The productcatalogservice is likely experiencing a short delay between the first error and the auto-abort, causing the application to become unresponsive. This is because the median first error time is 0.42 seconds, which is close to the median time for the auto-abort to occur (2.83 seconds).
 
-**Recommended fix:** Increase the number of replicas for productcatalogservice to reduce the error rate and recovery time.
+**Recommended fix:** Optimize the auto-abort process to reduce the delay between the first error and the auto-abort. This could involve adding additional logging or monitoring to detect issues earlier.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Verify that the median delay between the first error and the auto-abort is reduced to 1 second after optimizing the auto-abort process.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: AI: local Ollama (analysis model) (llama3.2:3b)</sub>
 
 ### 8. [Info · severity 5.0 · priority 3.5] paymentservice outage not visible to the probe (untested path)
 
@@ -197,13 +197,13 @@ Runs: `20261010T090605Z_scale_to_zero_productcatalogservice`, `20261010T092008Z_
 
 Runs: `20261010T104306Z_scale_to_zero_paymentservice`
 
-**Likely cause (hypothesis):** paymentservice outage is not visible to the probe, likely due to the untested path.
+**Likely cause (hypothesis):** The paymentservice is not visible to the probe, causing the application to become unresponsive. This is because the median error rate in fault is 0.0, indicating that the service is not failing. However, this may be due to the probe not detecting issues correctly.
 
-**Recommended fix:** Test the paymentservice outage path to ensure visibility.
+**Recommended fix:** Verify that the probe is correctly detecting issues in the paymentservice. This could involve adding additional logging or monitoring to detect issues earlier.
 
-**Verification experiment:** Run a stress test with the paymentservice outage path to confirm visibility.
+**Verification experiment:** Verify that the median error rate in fault is 0.01 after verifying that the probe is correctly detecting issues in the paymentservice.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: AI: local Ollama (analysis model) (llama3.2:3b)</sub>
 
 ### 9. [Info · severity 2.6 · priority 2.2] adservice takes 55 s to become Ready after restore
 
@@ -218,13 +218,13 @@ Runs: `20261010T104306Z_scale_to_zero_paymentservice`
 
 Runs: `20261010T091112Z_scale_to_zero_adservice`, `20261010T091455Z_scale_to_zero_adservice`
 
-**Likely cause (hypothesis):** adservice takes a long time to become Ready, likely due to its high initial readiness time.
+**Likely cause (hypothesis):** Container start-up and readiness checks take a long time for this service.
 
-**Recommended fix:** Increase the number of replicas for adservice to reduce the initial readiness time.
+**Recommended fix:** Shorten start-up (image/runtime tuning, readiness probe timing) or keep 2+ replicas so a restart is invisible to users.
 
-**Verification experiment:** Run a stress test with increased replicas to confirm the fix.
+**Verification experiment:** Measure ready time again after tuning the readiness probe.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 10. [Info · severity 1.9 · priority 1.3] P95 latency rises from 63 to 252 ms under a traffic spike (no errors)
 
@@ -242,13 +242,13 @@ Runs: `20261010T091112Z_scale_to_zero_adservice`, `20261010T091455Z_scale_to_zer
 
 Runs: `20261010T175803Z_traffic_spike_frontend`
 
-**Likely cause (hypothesis):** There is a traffic spike, likely due to the high P95 latency.
+**Likely cause (hypothesis):** Added delay propagates to user-facing pages because calls are synchronous and have no timeout budget or cache.
 
-**Recommended fix:** Monitor and adjust the traffic to reduce the P95 latency.
+**Recommended fix:** Set client timeouts and retries with deadlines, cache read-mostly data, and add an HPA and resource requests for load spikes.
 
-**Verification experiment:** Run a stress test with reduced traffic to confirm the fix.
+**Verification experiment:** Repeat with the fix and compare P95 against the baseline.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: template (AI text rejected: unverified number)</sub>
 
 ### 11. [Info · severity 0.0 · priority 0.0] Frontend degrades gracefully without adservice
 
@@ -264,13 +264,13 @@ Runs: `20261010T175803Z_traffic_spike_frontend`
 
 Runs: `20261010T091112Z_scale_to_zero_adservice`, `20261010T091455Z_scale_to_zero_adservice`
 
-**Likely cause (hypothesis):** Frontend can degrade gracefully without adservice, likely due to the absence of adservice.
+**Likely cause (hypothesis):** The frontend is degrading gracefully without the adservice, causing the application to become unresponsive. This is because the median error rate in fault is 0.0, indicating that the service is not failing. However, this may be due to the adservice not being properly configured.
 
-**Recommended fix:** Ensure adservice is always available to prevent degradations.
+**Recommended fix:** Verify that the adservice is properly configured to detect and prevent issues in the frontend. This could involve adding additional logging or monitoring to detect issues earlier.
 
-**Verification experiment:** Monitor the frontend for degradations without adservice to confirm the fix.
+**Verification experiment:** Verify that the median error rate in fault is 0.01 after verifying that the adservice is properly configured to detect and prevent issues in the frontend.
 
-<sub>Narrative source: AI: local Ollama (planner model) (qwen2.5:3b)</sub>
+<sub>Narrative source: AI: local Ollama (analysis model) (llama3.2:3b)</sub>
 
 ## Network latency: disposable lab validation (not part of the score)
 
