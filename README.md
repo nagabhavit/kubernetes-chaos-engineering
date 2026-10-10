@@ -1,70 +1,69 @@
 ﻿# Kubernetes Chaos Engineering — Online Boutique
 
+A local Kubernetes resilience experiment using Kind, Locust, and Python to observe application behavior during a controlled microservice disruption.
+
 ## Overview
+
+This project uses Google's [Online Boutique](https://github.com/GoogleCloudPlatform/microservices-demo) as the application under test. The application runs in a local Kind Kubernetes cluster while Locust generates HTTP traffic.
+
+The experiment compares a baseline load test with a test in which the `productcatalogservice` deployment is scaled down and restored.
+
+**My contribution:** Kubernetes experiment setup, controlled service disruption, Locust load testing, CSV result collection, and performance visualization.
+
 ## Architecture
 
-The experiment uses a local Kubernetes environment to evaluate application behavior during a controlled service disruption.
-
 ```text
-Locust Load Generator
-        |
-        v
+Locust Load Test
+       |
+       v
 Frontend Service
-        |
-        v
+       |
+       v
 Online Boutique Microservices
-        |
-        v
+       |
+       v
 Product Catalog Service
-        ^
-        |
-Controlled Fault Injection
-(scale deployment to zero, then restore)
-        |
-        v
-Kubernetes Recovery
+       ^
+       |
+Scale deployment to zero
+and restore the replica
+       |
+       v
+Kubernetes recovery
 
-Locust CSV Reports
-        |
-        v
+Locust CSV results
+       |
+       v
 Python + Matplotlib
-        |
-        v
-Performance Timeline Chart
+       |
+       v
+Performance timeline chart
 ```
 
-**Experiment workflow**
-1. Deploy Online Boutique to a local Kind cluster.
-2. Generate baseline traffic with Locust.
-3. Run a second load test while scaling `productcatalogservice` down and restoring it.
-4. Collect request statistics, failures, and response-time history.
-5. Visualize the recorded performance data with Matplotlib.
+This is a conceptual view of the experiment, not a complete service dependency diagram.
 
-This project evaluates the resilience of Google Cloud Platform's Online Boutique microservices demo running locally on Kubernetes using Kind.
+## Technology Stack
 
-The application is deployed in a local Kubernetes cluster, and Locust generates HTTP traffic while service failures are introduced.
-
-## Tech Stack
-- Kubernetes
-- Kind
+- Kubernetes and Kind
 - Docker Desktop
 - kubectl
 - Locust
-- Python
-- Matplotlib
+- Python and Matplotlib
 
 ## Environment
-- Kubernetes cluster: `boutique-chaos`
+
+- Cluster: `boutique-chaos`
 - Namespace: `boutique`
 - Load-test target: `http://localhost:8080`
 - Application: Online Boutique microservices demo
 
-## Experiments
+## Experiments and Results
 
-### 1. Baseline Load Test
+### Baseline load test
+
 Configuration:
-- Users: 10
-- Spawn rate: 1 user/second
+- Concurrent users: 10
+- Spawn rate: 1 user per second
 - Duration: 3 minutes
 
 Results:
@@ -77,11 +76,12 @@ Results:
 - Maximum response time: 96 ms
 - Throughput: approximately 2.15 requests/second
 
-### 2. Product Catalog Failure Experiment
-During a Locust load test, the `productcatalogservice` deployment was scaled down to zero replicas and then restored to one replica.
+### Product catalog disruption
+
+During a Locust load test, `productcatalogservice` was scaled to zero replicas and then restored to one replica.
 
 Results recorded by Locust:
-- Requests: 351
+- Requests: 351 in the aggregate CSV
 - Failed requests: 11
 - Failure rate: approximately 3.13%
 - Average response time: approximately 491.82 ms
@@ -90,15 +90,17 @@ Results recorded by Locust:
 - Maximum response time: approximately 20.01 seconds
 - Throughput: approximately 1.97 requests/second
 
-The failure CSV records HTTP 500 responses, including product-page requests and requests to `/cart` and `/setCurrency`.
+The failure report records HTTP 500 responses affecting product-page requests, `/cart`, and `/setCurrency`.
 
-The experiment coincided with the service scale-down and restoration. Exact timestamp correlation is still needed to attribute every failure conclusively to the injection window.
+The experiment coincided with the service scale-down and restoration. Individual failure timestamps have not yet been correlated with the precise outage window, so causality has not been conclusively established for every error.
 
-## Recovery
-Kubernetes successfully restored the `productcatalogservice` deployment. The application pods were subsequently observed in the `Running` and ready state.
+### Recovery
 
-## Results Files
-All generated Locust CSV files and the chart are stored in `results/`.
+The `productcatalogservice` deployment subsequently rolled out successfully, and the application pods were observed in the `Running` and ready state.
+
+## Results and Visualization
+
+The `results/` directory contains the Locust reports and generated chart.
 
 Key files:
 - `results/baseline2_stats.csv`
@@ -108,23 +110,46 @@ Key files:
 - `results/chaos2_failures.csv`
 - `results/chaos2_timeline.png`
 
-## Limitations
-- This is a local Kind cluster, not a production Kubernetes environment.
-- The baseline and failure experiment may differ in timing and request distribution.
-- The failure-injection window has not yet been correlated with individual request timestamps.
-- Results describe this test configuration and should not be generalized to production workloads.
+![Chaos test performance timeline](results/chaos2_timeline.png)
 
 ## Reproduction
 
-1. Deploy Online Boutique to a Kind cluster.
-2. Forward the frontend service to localhost port 8080.
-3. Activate the Python virtual environment.
-4. Run the baseline test:
+The recorded tests used a local Kind cluster, a deployed Online Boutique application, and a frontend port-forward to `localhost:8080`.
 
-   `python -m locust -f src/loadgenerator/locustfile.py --host http://localhost:8080 --headless --users 10 --spawn-rate 1 --run-time 3m --csv results/baseline2 --csv-full-history`
+Run the baseline load test from the repository root:
 
-5. Run the failure experiment by starting a similar Locust test and scaling `productcatalogservice` down and back up during the test.
-6. Inspect the resulting CSV files and generate the timeline chart with `python create_chart.py`.
+```powershell
+python -m locust -f src/loadgenerator/locustfile.py --host http://localhost:8080 --headless --users 10 --spawn-rate 1 --run-time 3m --csv results/baseline2 --csv-full-history
+```
+
+For the disruption experiment, start a separate Locust run with a different CSV prefix, then scale the product catalog deployment down and restore it:
+
+```powershell
+kubectl --context kind-boutique-chaos scale deployment/productcatalogservice -n boutique --replicas=0
+kubectl --context kind-boutique-chaos scale deployment/productcatalogservice -n boutique --replicas=1
+kubectl --context kind-boutique-chaos rollout status deployment/productcatalogservice -n boutique --timeout=120s
+```
+
+Generate the visualization from the saved chaos-test history:
+
+```powershell
+python create_chart.py
+```
+
+These commands assume the cluster, application, port-forward, Python environment, and dependencies are already configured. This README does not yet document a complete clean-machine setup.
+
+## Limitations
+
+- The experiment ran on a local Kind cluster, not a production Kubernetes environment.
+- The baseline and disruption runs may differ in request timing and distribution.
+- The exact failure-injection window has not been correlated with individual request timestamps.
+- Results are specific to this test configuration and should not be generalized to production workloads.
+- Repeated trials would improve confidence in the observations.
 
 ## Conclusion
-The baseline test completed without recorded failures. During the service disruption experiment, Locust recorded HTTP 500 responses and substantial latency spikes. Kubernetes subsequently restored the service. More precise timestamp correlation and repeated trials would strengthen the conclusions.
+
+The baseline test recorded no failed requests. During the disruption experiment, Locust recorded 11 failures and a maximum response time of approximately 20 seconds. Kubernetes subsequently restored the deployment. Timestamp correlation and repeated experiments are the next steps toward a stronger resilience assessment.
+
+## Upstream Project
+
+The application used for this experiment is Google's [Online Boutique microservices demo](https://github.com/GoogleCloudPlatform/microservices-demo). The chaos-testing procedure, experiment reports, and visualization in this repository document the work added for this project.
