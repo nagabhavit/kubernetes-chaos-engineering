@@ -1,0 +1,68 @@
+{
+  "run_id": "20261010T174253Z_network_latency_lab",
+  "kind": "network_latency_lab",
+  "context": "kind-boutique-chaos",
+  "namespace": "boutique",
+  "target": "chaos-lab-server",
+  "mechanism": "tc qdisc netem delay on the server pod's eth0 (NET_ADMIN)",
+  "request": {
+    "delay_ms": 200,
+    "duration": 30,
+    "samples": 15,
+    "ready_timeout": 600,
+    "keep_pods": false
+  },
+  "phases": {
+    "before": {
+      "phase": "before",
+      "requests": 15,
+      "ok": 15,
+      "errors": [],
+      "http_total_ms_median": 1.51,
+      "http_total_ms_p95": 2.09,
+      "http_connect_ms_median": 0.18,
+      "ping_avg_ms": 0.119,
+      "ping_min_ms": 0.048,
+      "ping_raw": null
+    },
+    "during": {
+      "phase": "during",
+      "requests": 15,
+      "ok": 15,
+      "errors": [],
+      "http_total_ms_median": 404.62,
+      "http_total_ms_p95": 405.25,
+      "http_connect_ms_median": 200.55,
+      "ping_avg_ms": 200.012,
+      "ping_min_ms": 197.754,
+      "ping_raw": null
+    },
+    "after": {
+      "phase": "after",
+      "requests": 15,
+      "ok": 15,
+      "errors": [],
+      "http_total_ms_median": 4.7,
+      "http_total_ms_p95": 5.23,
+      "http_connect_ms_median": 0.54,
+      "ping_avg_ms": 0.135,
+      "ping_min_ms": 0.081,
+      "ping_raw": null
+    }
+  },
+  "checks": {
+    "all_requests_ok_before_and_after": true,
+    "ping_increase_during_ms": 199.89,
+    "http_increase_during_ms": 403.11,
+    "ping_after_minus_before_ms": 0.02,
+    "netem_removed_verified": true,
+    "delay_visible_during": true,
+    "delay_gone_after": true
+  },
+  "pass_criteria": "increase >= 0.8 x 200 ms during (ping or HTTP median); ping back within max(5 ms, 50%) of before; all requests OK before/after; netem removal verified",
+  "status": "PASS",
+  "cleanup": [
+    "lab pods deleted rc=0"
+  ],
+  "finished": "2026-10-10T17:43:13.299Z"
+}

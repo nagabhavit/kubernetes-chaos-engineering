@@ -1,0 +1,391 @@
+{
+  "created": "2026-10-10T17:02:17+00:00",
+  "planner": "AI (Ollama)",
+  "model": "qwen2.5:3b (local)",
+  "llm_error": null,
+  "raw_output": "{\n  \"experiments\": [\n    {\n      \"rank\": 1,\n      \"target\": \"frontend\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"User checkout times will increase by more than 500ms due to network latency in the frontend.\",\n      \"reason\": \"Previous runs showed increased error rates with network latency faults.\",\n      \"expected_impact\": \"Significant degradation in user experience during checkouts.\"\n    },\n    {\n      \"rank\": 2,\n      \"target\": \"adservice\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"Ad rendering will be delayed, potentially causing ad-related user frustration.\",\n      \"reason\": \"Previous runs with ad service network latency showed errors and slow user experience.\",\n      \"expected_impact\": \"Ads will appear delayed or not at all, affecting user engagement.\"\n    },\n    {\n      \"rank\": 3,\n      \"target\": \"checkoutservice\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"Checkout process will take longer, increasing user abandonment rates.\",\n      \"reason\": \"Previous runs with checkout service network latency showed increased error rates and slower user flows.\",\n      \"expected_impact\": \"Users will abandon the checkout process more frequently, impacting conversion rates.\"\n    },\n    {\n      \"rank\": 4,\n      \"target\": \"cartservice\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"Cart operations will be slower, potentially leading to user frustration.\",\n      \"reason\": \"Previous runs with cartservice network latency showed increased error rates and slower user interactions.\",\n      \"expected_impact\": \"Users will experience delays in adding items to cart or updating cart contents.\"\n    },\n    {\n      \"rank\": 5,\n      \"target\": \"recommendationservice\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"Recommendation suggestions will be delayed, reducing user satisfaction.\",\n      \"reason\": \"Previous runs with recommendationservice network latency showed increased error rates and slower user engagement.\",\n      \"expected_impact\": \"Users will receive delayed or missing recommendations, impacting personalized shopping experiences.\"\n    }\n  ]\n}",
+  "experiments": [
+    {
+      "target": "adservice",
+      "fault_type": "network_latency",
+      "duration_seconds": 10,
+      "parameters": {
+        "delay_ms": 200
+      },
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "remove the netem qdisc (self-removes after duration); 5 consecutive fast successful requests",
+      "hypothesis": "Ad rendering will be delayed, potentially causing ad-related user frustration.",
+      "expected_impact": "Ads will appear delayed or not at all, affecting user engagement.",
+      "reason": "Previous runs with ad service network latency showed errors and slow user experience.",
+      "rank": 1,
+      "experiment_id": "EXP-20261010T170217Z-1"
+    },
+    {
+      "target": "checkoutservice",
+      "fault_type": "network_latency",
+      "duration_seconds": 10,
+      "parameters": {
+        "delay_ms": 200
+      },
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "remove the netem qdisc (self-removes after duration); 5 consecutive fast successful requests",
+      "hypothesis": "Checkout process will take longer, increasing user abandonment rates.",
+      "expected_impact": "Users will abandon the checkout process more frequently, impacting conversion rates.",
+      "reason": "Previous runs with checkout service network latency showed increased error rates and slower user flows.",
+      "rank": 2,
+      "experiment_id": "EXP-20261010T170217Z-2"
+    },
+    {
+      "target": "cartservice",
+      "fault_type": "network_latency",
+      "duration_seconds": 10,
+      "parameters": {
+        "delay_ms": 200
+      },
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "remove the netem qdisc (self-removes after duration); 5 consecutive fast successful requests",
+      "hypothesis": "Cart operations will be slower, potentially leading to user frustration.",
+      "expected_impact": "Users will experience delays in adding items to cart or updating cart contents.",
+      "reason": "Previous runs with cartservice network latency showed increased error rates and slower user interactions.",
+      "rank": 3,
+      "experiment_id": "EXP-20261010T170217Z-3"
+    },
+    {
+      "target": "recommendationservice",
+      "fault_type": "network_latency",
+      "duration_seconds": 10,
+      "parameters": {
+        "delay_ms": 200
+      },
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "remove the netem qdisc (self-removes after duration); 5 consecutive fast successful requests",
+      "hypothesis": "Recommendation suggestions will be delayed, reducing user satisfaction.",
+      "expected_impact": "Users will receive delayed or missing recommendations, impacting personalized shopping experiences.",
+      "reason": "Previous runs with recommendationservice network latency showed increased error rates and slower user engagement.",
+      "rank": 4,
+      "experiment_id": "EXP-20261010T170217Z-4"
+    }
+  ],
+  "rejected": [
+    {
+      "proposal": {
+        "rank": 1,
+        "target": "frontend",
+        "fault_type": "network_latency",
+        "duration_seconds": 10,
+        "hypothesis": "User checkout times will increase by more than 500ms due to network latency in the frontend.",
+        "reason": "Previous runs showed increased error rates with network latency faults.",
+        "expected_impact": "Significant degradation in user experience during checkouts."
+      },
+      "reasons": [
+        "target 'frontend' not in allowlist"
+      ]
+    }
+  ],
+  "context": {
+    "application": "Google Online Boutique on local kind cluster (sandbox only)",
+    "services": [
+      "adservice",
+      "cartservice",
+      "checkoutservice",
+      "currencyservice",
+      "emailservice",
+      "frontend",
+      "paymentservice",
+      "productcatalogservice",
+      "recommendationservice",
+      "redis-cart",
+      "shippingservice"
+    ],
+    "dependency_edges": [
+      {
+        "from": "cartservice",
+        "to": "redis-cart",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "productcatalogservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "shippingservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "paymentservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "emailservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "currencyservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "cartservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "productcatalogservice",
+        "verified": true,
+        "criticality": "critical",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "currencyservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "cartservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "recommendationservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "shippingservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "checkoutservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "adservice",
+        "verified": true,
+        "criticality": "non-critical (graceful degradation)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "shoppingassistantservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": false
+      },
+      {
+        "from": "recommendationservice",
+        "to": "productcatalogservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      }
+    ],
+    "cluster_health": {
+      "reachable": true,
+      "degraded_deployments": []
+    },
+    "baseline_probe_window": {
+      "n": 58,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p95_ms": 36.3,
+      "consecutive_conn_errors": 0,
+      "last_sample_age_s": 0.092315673828125
+    },
+    "previous_runs": [
+      {
+        "run_id": "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.5,
+        "errors_in_fault": 2,
+        "probes_in_fault": 3,
+        "first_error_after_inject_s": 0.41,
+        "k8s_ready_s": 0.98,
+        "user_recovery_s": 18.69
+      },
+      {
+        "run_id": "20261010T104306Z_scale_to_zero_paymentservice",
+        "target": "paymentservice",
+        "fault": "scale_to_zero",
+        "status": "COMPLETED",
+        "fault_duration_s": 15.12,
+        "errors_in_fault": 0,
+        "probes_in_fault": 59,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 11.87,
+        "user_recovery_s": 0.23
+      },
+      {
+        "run_id": "20261010T100435Z_scale_to_zero_cartservice",
+        "target": "cartservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 1.64,
+        "errors_in_fault": 4,
+        "probes_in_fault": 6,
+        "first_error_after_inject_s": 0.64,
+        "k8s_ready_s": 32.06,
+        "user_recovery_s": 48.16
+      },
+      {
+        "run_id": "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.72,
+        "errors_in_fault": 2,
+        "probes_in_fault": 4,
+        "first_error_after_inject_s": 0.68,
+        "k8s_ready_s": 3.02,
+        "user_recovery_s": 19.04
+      },
+      {
+        "run_id": "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.94,
+        "errors_in_fault": 4,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.39,
+        "k8s_ready_s": 12.14,
+        "user_recovery_s": 17.39
+      },
+      {
+        "run_id": "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 3.02,
+        "errors_in_fault": 4,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.44,
+        "k8s_ready_s": 2.64,
+        "user_recovery_s": 19.78
+      },
+      {
+        "run_id": "20261010T091455Z_scale_to_zero_adservice",
+        "target": "adservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_KILL_SWITCH",
+        "fault_duration_s": 10.08,
+        "errors_in_fault": 0,
+        "probes_in_fault": 39,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 47.14,
+        "user_recovery_s": 0.25
+      },
+      {
+        "run_id": "20261010T091112Z_scale_to_zero_adservice",
+        "target": "adservice",
+        "fault": "scale_to_zero",
+        "status": "COMPLETED",
+        "fault_duration_s": 60.1,
+        "errors_in_fault": 0,
+        "probes_in_fault": 232,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 63.66,
+        "user_recovery_s": 0.01
+      },
+      {
+        "run_id": "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 3.05,
+        "errors_in_fault": 3,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.7,
+        "k8s_ready_s": 4.14,
+        "user_recovery_s": 20.41
+      }
+    ],
+    "allowed_catalog": {
+      "targets": [
+        "adservice",
+        "cartservice",
+        "checkoutservice",
+        "currencyservice",
+        "emailservice",
+        "paymentservice",
+        "productcatalogservice",
+        "recommendationservice",
+        "redis-cart",
+        "shippingservice"
+      ],
+      "fault_types": {
+        "scale_to_zero": "deployment scaled to 0 replicas for duration_seconds, then restored",
+        "pod_delete": "target pods deleted once; Kubernetes recreates them",
+        "traffic_spike": "target MUST be 'frontend'; spike_users 1..150 extra users",
+        "network_latency": "netem delay on one target pod; delay_ms 20..500"
+      },
+      "duration_seconds": {
+        "min": 5,
+        "max": 30
+      },
+      "abort_conditions": {
+        "max_error_rate": {
+          "min": 0.05,
+          "max": 0.2
+        },
+        "max_p95_ms": {
+          "min": 200,
+          "max": 1000
+        }
+      }
+    }
+  }
+}

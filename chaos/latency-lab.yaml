@@ -1,0 +1,44 @@
+# Disposable network-latency lab (validation only). Two pods, nothing else in the app is touched.
+#   chaos-lab-server : tiny HTTP responder (socat) - the ONLY allowed netem target; has NET_ADMIN
+#   chaos-lab-client : measures latency to the server with curl and ping
+# Both pods self-terminate after 30 min (activeDeadlineSeconds) even if cleanup never runs.
+# Uses nicolaka/netshoot:v0.13, already pulled on the kind node by the netem feasibility check.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: chaos-lab-server
+  namespace: boutique
+  labels: {app.kubernetes.io/part-of: chaos-lab, chaos-lab/role: server}
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 1800
+  terminationGracePeriodSeconds: 1
+  containers:
+  - name: server
+    image: nicolaka/netshoot:v0.13
+    securityContext:
+      capabilities: {add: ["NET_ADMIN"]}
+    command: ["sh", "-c"]
+    args:
+    - |
+      printf 'HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok' > /tmp/resp
+      exec socat -T5 TCP-LISTEN:8080,reuseaddr,fork EXEC:"cat /tmp/resp"
+    ports: [{containerPort: 8080}]
+    readinessProbe:
+      tcpSocket: {port: 8080}
+      periodSeconds: 2
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: chaos-lab-client
+  namespace: boutique
+  labels: {app.kubernetes.io/part-of: chaos-lab, chaos-lab/role: client}
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 1800
+  terminationGracePeriodSeconds: 1
+  containers:
+  - name: client
+    image: nicolaka/netshoot:v0.13
+    command: ["sleep", "1800"]

@@ -1,0 +1,156 @@
+{
+  "workflow_id": "WF-20261010T170448Z",
+  "mode": "dry_run",
+  "rank": 1,
+  "manual": null,
+  "plan": {
+    "created": "2026-10-10T17:04:48+00:00",
+    "planner": "AI (Ollama)",
+    "model": "qwen2.5:3b (local)",
+    "llm_error": null,
+    "raw_output": "{\n  \"experiments\": [\n    {\n      \"rank\": 1,\n      \"target\": \"redis-cart\",\n      \"fault_type\": \"pod_delete\",\n      \"duration_seconds\": 15,\n      \"hypothesis\": \"Redis cache performance will degrade, leading to increased latency and potential service unavailability.\",\n      \"reason\": \"Previous runs showed issues with Redis scaling to zero replicas.\",\n      \"expected_impact\": \"User experience will be negatively impacted due to cache misses.\"\n    },\n    {\n      \"rank\": 2,\n      \"target\": \"recommendationservice\",\n      \"fault_type\": \"pod_delete\",\n      \"duration_seconds\": 15,\n      \"hypothesis\": \"Recommendation service will fail, causing a drop in user engagement and satisfaction.\",\n      \"reason\": \"Unclear criticality but previous runs showed issues with this service.\",\n      \"expected_impact\": \"Users will see fewer personalized recommendations, leading to a suboptimal shopping experience.\"\n    },\n    {\n      \"rank\": 3,\n      \"target\": \"frontend\",\n      \"fault_type\": \"network_latency\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"User load times will increase, potentially leading to a poor user experience.\",\n      \"reason\": \"Previous runs showed increased latency affecting frontend performance.\",\n      \"expected_impact\": \"Users may experience longer load times, leading to frustration and potential abandonment.\"\n    }\n  ]}",
+    "experiments": [
+      {
+        "target": "redis-cart",
+        "fault_type": "pod_delete",
+        "duration_seconds": 15,
+        "parameters": {},
+        "abort_conditions": {
+          "max_error_rate": 0.2,
+          "max_p95_ms": 1000,
+          "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+          "kill_switch": "chaos/KILL file or Ctrl+C"
+        },
+        "recovery_verification": "Kubernetes recreates the pod; rollout status; 5 consecutive successful frontend requests",
+        "hypothesis": "Redis cache performance will degrade, leading to increased latency and potential service unavailability.",
+        "expected_impact": "User experience will be negatively impacted due to cache misses.",
+        "reason": "Previous runs showed issues with Redis scaling to zero replicas.",
+        "rank": 1,
+        "experiment_id": "EXP-20261010T170448Z-1"
+      },
+      {
+        "target": "recommendationservice",
+        "fault_type": "pod_delete",
+        "duration_seconds": 15,
+        "parameters": {},
+        "abort_conditions": {
+          "max_error_rate": 0.2,
+          "max_p95_ms": 1000,
+          "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+          "kill_switch": "chaos/KILL file or Ctrl+C"
+        },
+        "recovery_verification": "Kubernetes recreates the pod; rollout status; 5 consecutive successful frontend requests",
+        "hypothesis": "Recommendation service will fail, causing a drop in user engagement and satisfaction.",
+        "expected_impact": "Users will see fewer personalized recommendations, leading to a suboptimal shopping experience.",
+        "reason": "Unclear criticality but previous runs showed issues with this service.",
+        "rank": 2,
+        "experiment_id": "EXP-20261010T170448Z-2"
+      }
+    ],
+    "rejected": [
+      {
+        "proposal": {
+          "rank": 3,
+          "target": "frontend",
+          "fault_type": "network_latency",
+          "duration_seconds": 10,
+          "hypothesis": "User load times will increase, potentially leading to a poor user experience.",
+          "reason": "Previous runs showed increased latency affecting frontend performance.",
+          "expected_impact": "Users may experience longer load times, leading to frustration and potential abandonment."
+        },
+        "reasons": [
+          "target 'frontend' not in allowlist"
+        ]
+      }
+    ],
+    "saved_to": "C:\\Projects\\microservices-demo\\results\\plans\\plan_20261010T170448Z.json"
+  },
+  "proposal": {
+    "target": "redis-cart",
+    "fault_type": "pod_delete",
+    "duration_seconds": 15,
+    "parameters": {},
+    "abort_conditions": {
+      "max_error_rate": 0.2,
+      "max_p95_ms": 1000,
+      "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+      "kill_switch": "chaos/KILL file or Ctrl+C"
+    },
+    "recovery_verification": "Kubernetes recreates the pod; rollout status; 5 consecutive successful frontend requests",
+    "hypothesis": "Redis cache performance will degrade, leading to increased latency and potential service unavailability.",
+    "expected_impact": "User experience will be negatively impacted due to cache misses.",
+    "reason": "Previous runs showed issues with Redis scaling to zero replicas.",
+    "rank": 1,
+    "experiment_id": "EXP-20261010T170448Z-1",
+    "planner": "AI (Ollama)",
+    "planner_model": "qwen2.5:3b (local)"
+  },
+  "approval": {
+    "approved": true,
+    "by": "dry-run (no fault will be injected)"
+  },
+  "execution": {
+    "dry_run": true,
+    "command": [
+      "C:\\Projects\\microservices-demo\\.venv313\\Scripts\\python.exe",
+      "-u",
+      "C:\\Projects\\microservices-demo\\chaos\\controller.py",
+      "--target",
+      "redis-cart",
+      "--fault",
+      "pod_delete",
+      "--duration",
+      "15",
+      "--max-error-rate",
+      "0.2",
+      "--max-p95-ms",
+      "1000",
+      "--baseline",
+      "15",
+      "--post",
+      "30",
+      "--recovery-timeout",
+      "120",
+      "--url",
+      "http://localhost:8080",
+      "--label",
+      "workflow WF-20261010T170448Z EXP-20261010T170448Z-1 (AI (Ollama)): Redis cache performance will degrade, leading to increased latency and potential service unavailability."
+    ],
+    "exit_code": null,
+    "run_id": null,
+    "watchdog_fired": false
+  },
+  "outcome": "DRY_RUN (no fault injected)",
+  "steps": [
+    {
+      "node": "collect_state",
+      "at": "2026-10-10T17:04:48+00:00",
+      "note": "9 previous runs; health {'reachable': True, 'degraded_deployments': []}"
+    },
+    {
+      "node": "plan",
+      "at": "2026-10-10T17:04:59+00:00",
+      "note": "AI (Ollama) -> 2 valid, 1 rejected"
+    },
+    {
+      "node": "validate",
+      "at": "2026-10-10T17:04:59+00:00",
+      "note": "EXP-20261010T170448Z-1 passed"
+    },
+    {
+      "node": "approve",
+      "at": "2026-10-10T17:04:59+00:00",
+      "note": "dry run"
+    },
+    {
+      "node": "execute",
+      "at": "2026-10-10T17:04:59+00:00",
+      "note": "dry run: C:\\Projects\\microservices-demo\\chaos\\controller.py --target redis-cart --fault pod_delete --duration 15 --max-error-rate 0.2 --max-p95-ms 1000 --baseline 15 --post 30 --recovery-timeout 120 --url http://localhost:8080 --label workflow WF-20261010T170448Z EXP-20261010T170448Z-1 (AI (Ollama)): Redis cache performance will degrade, leading to increased latency and potential service unavailability."
+    },
+    {
+      "node": "save",
+      "at": "2026-10-10T17:04:59+00:00",
+      "note": "C:\\Projects\\microservices-demo\\results\\workflows\\WF-20261010T170448Z.json"
+    }
+  ]
+}

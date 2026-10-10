@@ -27,6 +27,7 @@ Endpoints used by the UI:
 Standard library only. Binds to 127.0.0.1.
 """
 import json
+import os
 import random
 import subprocess
 import sys
@@ -46,7 +47,7 @@ import planner as PL    # noqa: E402  (AI planner + deterministic validator)
 import analyze as AN    # noqa: E402  (findings, severity ranking, resilience score)
 
 HOST, PORT = "127.0.0.1", 8000
-FRONTEND_URL = "http://localhost:8080"
+FRONTEND_URL = os.getenv("CHAOS_FRONTEND_URL", "http://localhost:8080")
 TELEMETRY_DIR = C.REPO / "results" / "telemetry"
 
 # UI fault label -> controller fault. None = not implemented (rejected, never faked).
@@ -54,7 +55,7 @@ FAULT_MAP = {
     "service_unavailability": "scale_to_zero",
     "pod_failure": "pod_delete",
     "traffic_spike": "traffic_spike",
-    "latency": None,
+    "latency": None,   # application-pod latency is disabled; validated on disposable pods via netem_lab.py
 }
 RANDOM_DURATION_S = 15
 
@@ -134,12 +135,13 @@ class Runner:
     def active(self):
         return bool(self.proc and self.proc.poll() is None)
 
-    def start(self, target, fault, duration, objective, origin="ui"):
+    def start(self, target, fault, duration, objective, origin="ui", extra=None):
         with self.lock:
             if self.active:
                 return 409, {"error": "an experiment is already running", "run_id": self.run_id}
             cmd = [sys.executable, "-u", str(HERE / "controller.py"), "--target", target, "--fault", fault,
-                   "--duration", str(duration), "--label", f"{origin}: {objective}"[:200]]
+                   "--duration", str(duration), "--label", f"{origin}: {objective}"[:200], "--url", FRONTEND_URL,
+                   *(extra or [])]
             self.request = {"target": target, "fault": fault, "duration": duration, "objective": objective,
                             "origin": origin, "requested": utc()}
             self.run_id, self.log_lines = None, []
@@ -296,7 +298,8 @@ class Handler(BaseHTTPRequestHandler):
             fault = FAULT_MAP.get(ui_fault, "__unknown__")
             if fault is None:
                 return self._json(400, {"status": "REJECTED", "reasons": [
-                    f"fault '{ui_fault}' is not implemented yet; nothing was injected"]})
+                    f"fault '{ui_fault}' is not enabled for application pods (network latency is validated on "
+                    "disposable lab pods: python chaos\\netem_lab.py); nothing was injected"]})
             if fault == "__unknown__":
                 return self._json(400, {"status": "REJECTED", "reasons": [f"unknown fault '{ui_fault}'"]})
             try:
@@ -338,14 +341,18 @@ class Handler(BaseHTTPRequestHandler):
             prop = next((e for e in plan["experiments"] if e["rank"] == body.get("rank")), None)
             if not prop:
                 return self._json(400, {"status": "REJECTED", "reasons": [f"rank {body.get('rank')} not in latest plan"]})
-            ok, bad = PL.validate([prop])   # re-validate at execution time
+            import workflow as W
+            import executor as X
+            ok, bad = PL.validate([W._flat(prop)])   # re-validate at execution time
             if bad:
                 return self._json(400, {"status": "REJECTED", "reasons": bad[0]["reasons"]})
             if not INGEST.running:
                 INGEST.start()
             tag = "AI" if plan["planner"].startswith("AI") else "rule-based"
+            extra = X.controller_extra_args(ok[0])      # thresholds + spike parameters, built explicitly
             code, res = RUNNER.start(prop["target"], prop["fault_type"], prop["duration_seconds"],
-                                     f"planner({tag}) #{prop['rank']}: {prop['hypothesis']}", origin="planner")
+                                     f"planner({tag}) {prop['experiment_id']}: {prop['hypothesis']}", origin="planner",
+                                     extra=extra)
             res["proposal"] = prop
             return self._json(code, res)
         if path == "/rollback":

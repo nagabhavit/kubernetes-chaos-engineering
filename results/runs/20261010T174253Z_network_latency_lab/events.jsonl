@@ -1,0 +1,9 @@
+{"ts": "2026-10-10T17:42:54.277Z", "event": "lab_created", "pods": ["chaos-lab-server", "chaos-lab-client"]}
+{"ts": "2026-10-10T17:42:55.941Z", "event": "lab_ready", "server_ip": "10.244.0.18", "qdisc_before": "qdisc noqueue 0: root refcnt 2"}
+{"ts": "2026-10-10T17:42:59.122Z", "event": "measured", "phase": "before", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 1.51, "http_total_ms_p95": 2.09, "http_connect_ms_median": 0.18, "ping_avg_ms": 0.119, "ping_min_ms": 0.048, "ping_raw": null}
+{"ts": "2026-10-10T17:42:59.442Z", "event": "fault_injected", "qdisc": "qdisc netem 8003: root refcnt 13 limit 1000 delay 200ms seed 6700787485866322242", "delay_ms": 200, "self_removal_after_s": 40}
+{"ts": "2026-10-10T17:43:08.899Z", "event": "measured", "phase": "during", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 404.62, "http_total_ms_p95": 405.25, "http_connect_ms_median": 200.55, "ping_avg_ms": 200.012, "ping_min_ms": 197.754, "ping_raw": null}
+{"ts": "2026-10-10T17:43:09.496Z", "event": "fault_removed", "qdisc_after": "qdisc noqueue 0: root refcnt 2", "verified": true, "fault_duration_s": 10.37}
+{"ts": "2026-10-10T17:43:12.986Z", "event": "measured", "phase": "after", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 4.7, "http_total_ms_p95": 5.23, "http_connect_ms_median": 0.54, "ping_avg_ms": 0.135, "ping_min_ms": 0.081, "ping_raw": null}
+{"ts": "2026-10-10T17:43:12.991Z", "event": "verdict", "status": "PASS", "all_requests_ok_before_and_after": true, "ping_increase_during_ms": 199.89, "http_increase_during_ms": 403.11, "ping_after_minus_before_ms": 0.02, "netem_removed_verified": true, "delay_visible_during": true, "delay_gone_after": true}
+{"ts": "2026-10-10T17:43:13.298Z", "event": "cleanup", "steps": ["lab pods deleted rc=0"]}

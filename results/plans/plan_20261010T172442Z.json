@@ -1,0 +1,374 @@
+{
+  "created": "2026-10-10T17:24:42+00:00",
+  "planner": "AI (Ollama)",
+  "model": "qwen2.5:3b (local)",
+  "llm_error": null,
+  "raw_output": "{\n  \"experiments\": [\n    {\n      \"rank\": 1,\n      \"target\": \"cartservice\",\n      \"fault_type\": \"scale_to_zero\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"User checkout failures will increase due to missing cart data.\",\n      \"reason\": \"Previous runs showed errors in cart service led to checkout failures.\",\n      \"expected_impact\": \"Checkout process will be disrupted.\"\n    },\n    {\n      \"rank\": 2,\n      \"target\": \"recommendationservice\",\n      \"fault_type\": \"pod_delete\",\n      \"duration_seconds\": 15,\n      \"hypothesis\": \"User experience will degrade as recommendations are not available.\",\n      \"reason\": \"Recommendationservice is not verified but critical for user experience.\",\n      \"expected_impact\": \"User recommendations will be unavailable.\"\n    },\n    {\n      \"rank\": 3,\n      \"target\": \"frontend\",\n      \"fault_type\": \"traffic_spike\",\n      \"duration_seconds\": 10,\n      \"hypothesis\": \"User load on frontend will cause degraded performance.\",\n      \"reason\": \"Frontend is the target for traffic spikes and is verified.\",\n      \"expected_impact\": \"Frontend response times may increase.\"\n    }\n  ]\n}",
+  "experiments": [
+    {
+      "target": "cartservice",
+      "fault_type": "scale_to_zero",
+      "duration_seconds": 10,
+      "parameters": {},
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "restore original replica count; kubectl rollout status; 5 consecutive successful frontend requests",
+      "hypothesis": "User checkout failures will increase due to missing cart data.",
+      "expected_impact": "Checkout process will be disrupted.",
+      "reason": "Previous runs showed errors in cart service led to checkout failures.",
+      "rank": 1,
+      "experiment_id": "EXP-20261010T172442Z-1",
+      "evidence": {
+        "previous_runs_on_target": 1,
+        "previous_runs_same_fault": 1,
+        "callers_in_dependency_map": [
+          "checkoutservice",
+          "frontend"
+        ]
+      },
+      "grounding": "ok"
+    },
+    {
+      "target": "recommendationservice",
+      "fault_type": "pod_delete",
+      "duration_seconds": 15,
+      "parameters": {},
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "Kubernetes recreates the pod; rollout status; 5 consecutive successful frontend requests",
+      "hypothesis": "User experience will degrade as recommendations are not available.",
+      "expected_impact": "User recommendations will be unavailable.",
+      "reason": "Recommendationservice is not verified but critical for user experience.",
+      "rank": 2,
+      "experiment_id": "EXP-20261010T172442Z-2",
+      "evidence": {
+        "previous_runs_on_target": 0,
+        "previous_runs_same_fault": 0,
+        "callers_in_dependency_map": [
+          "frontend"
+        ]
+      },
+      "grounding": "ok"
+    },
+    {
+      "target": "frontend",
+      "fault_type": "traffic_spike",
+      "duration_seconds": 10,
+      "parameters": {
+        "spike_users": 80
+      },
+      "abort_conditions": {
+        "max_error_rate": 0.2,
+        "max_p95_ms": 1000,
+        "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+        "kill_switch": "chaos/KILL file or Ctrl+C"
+      },
+      "recovery_verification": "stop the load generator; 5 consecutive successful requests under the P95 limit",
+      "hypothesis": "User load on frontend will cause degraded performance.",
+      "expected_impact": "Frontend response times may increase.",
+      "reason": "Frontend is the target for traffic spikes and is verified.",
+      "rank": 3,
+      "experiment_id": "EXP-20261010T172442Z-3",
+      "evidence": {
+        "previous_runs_on_target": 0,
+        "previous_runs_same_fault": 0,
+        "callers_in_dependency_map": []
+      },
+      "grounding": "ok"
+    }
+  ],
+  "rejected": [],
+  "context": {
+    "application": "Google Online Boutique on local kind cluster (sandbox only)",
+    "services": [
+      "adservice",
+      "cartservice",
+      "checkoutservice",
+      "currencyservice",
+      "emailservice",
+      "frontend",
+      "paymentservice",
+      "productcatalogservice",
+      "recommendationservice",
+      "redis-cart",
+      "shippingservice"
+    ],
+    "dependency_edges": [
+      {
+        "from": "cartservice",
+        "to": "redis-cart",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "productcatalogservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "shippingservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "paymentservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "emailservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "currencyservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "checkoutservice",
+        "to": "cartservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "productcatalogservice",
+        "verified": true,
+        "criticality": "critical",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "currencyservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "cartservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "recommendationservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "shippingservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "checkoutservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "adservice",
+        "verified": true,
+        "criticality": "non-critical (graceful degradation)",
+        "target_deployed": true
+      },
+      {
+        "from": "frontend",
+        "to": "shoppingassistantservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": false
+      },
+      {
+        "from": "recommendationservice",
+        "to": "productcatalogservice",
+        "verified": false,
+        "criticality": "unknown (not yet tested)",
+        "target_deployed": true
+      }
+    ],
+    "cluster_health": {
+      "reachable": true,
+      "degraded_deployments": []
+    },
+    "baseline_probe_window": {
+      "n": 58,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p95_ms": 36.3,
+      "consecutive_conn_errors": 0,
+      "last_sample_age_s": 0.092315673828125
+    },
+    "previous_runs": [
+      {
+        "run_id": "20261010T104422Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.5,
+        "errors_in_fault": 2,
+        "probes_in_fault": 3,
+        "first_error_after_inject_s": 0.41,
+        "k8s_ready_s": 0.98,
+        "user_recovery_s": 18.69
+      },
+      {
+        "run_id": "20261010T104306Z_scale_to_zero_paymentservice",
+        "target": "paymentservice",
+        "fault": "scale_to_zero",
+        "status": "COMPLETED",
+        "fault_duration_s": 15.12,
+        "errors_in_fault": 0,
+        "probes_in_fault": 59,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 11.87,
+        "user_recovery_s": 0.23
+      },
+      {
+        "run_id": "20261010T100435Z_scale_to_zero_cartservice",
+        "target": "cartservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 1.64,
+        "errors_in_fault": 4,
+        "probes_in_fault": 6,
+        "first_error_after_inject_s": 0.64,
+        "k8s_ready_s": 32.06,
+        "user_recovery_s": 48.16
+      },
+      {
+        "run_id": "20261010T095627Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.72,
+        "errors_in_fault": 2,
+        "probes_in_fault": 4,
+        "first_error_after_inject_s": 0.68,
+        "k8s_ready_s": 3.02,
+        "user_recovery_s": 19.04
+      },
+      {
+        "run_id": "20261010T095507Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 2.94,
+        "errors_in_fault": 4,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.39,
+        "k8s_ready_s": 12.14,
+        "user_recovery_s": 17.39
+      },
+      {
+        "run_id": "20261010T092008Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 3.02,
+        "errors_in_fault": 4,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.44,
+        "k8s_ready_s": 2.64,
+        "user_recovery_s": 19.78
+      },
+      {
+        "run_id": "20261010T091455Z_scale_to_zero_adservice",
+        "target": "adservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_KILL_SWITCH",
+        "fault_duration_s": 10.08,
+        "errors_in_fault": 0,
+        "probes_in_fault": 39,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 47.14,
+        "user_recovery_s": 0.25
+      },
+      {
+        "run_id": "20261010T091112Z_scale_to_zero_adservice",
+        "target": "adservice",
+        "fault": "scale_to_zero",
+        "status": "COMPLETED",
+        "fault_duration_s": 60.1,
+        "errors_in_fault": 0,
+        "probes_in_fault": 232,
+        "first_error_after_inject_s": null,
+        "k8s_ready_s": 63.66,
+        "user_recovery_s": 0.01
+      },
+      {
+        "run_id": "20261010T090605Z_scale_to_zero_productcatalogservice",
+        "target": "productcatalogservice",
+        "fault": "scale_to_zero",
+        "status": "ABORTED_THRESHOLD",
+        "fault_duration_s": 3.05,
+        "errors_in_fault": 3,
+        "probes_in_fault": 5,
+        "first_error_after_inject_s": 0.7,
+        "k8s_ready_s": 4.14,
+        "user_recovery_s": 20.41
+      }
+    ],
+    "allowed_catalog": {
+      "targets": [
+        "adservice",
+        "cartservice",
+        "checkoutservice",
+        "currencyservice",
+        "emailservice",
+        "paymentservice",
+        "productcatalogservice",
+        "recommendationservice",
+        "redis-cart",
+        "shippingservice"
+      ],
+      "fault_types": {
+        "scale_to_zero": "deployment scaled to 0 replicas for duration_seconds, then restored",
+        "pod_delete": "target pods deleted once; Kubernetes recreates them",
+        "traffic_spike": "target MUST be 'frontend'; spike_users 1..150 extra users"
+      },
+      "duration_seconds": {
+        "min": 5,
+        "max": 30
+      },
+      "abort_conditions": {
+        "max_error_rate": {
+          "min": 0.05,
+          "max": 0.2
+        },
+        "max_p95_ms": {
+          "min": 200,
+          "max": 1000
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T17:25:18.937Z", "event": "aborted", "reason": "kubectl apply -f C:\\Projects\\microservices-demo\\chaos\\latency-lab.yaml failed (rc=1): error: error parsing C:\\Projects\\microservices-demo\\chaos\\latency-lab.yaml: error converting YAML to JSON: yaml: line 23: mapping values are not allowed in this context"}
+{"ts": "2026-10-10T17:25:18.938Z", "event": "cleanup", "steps": []}

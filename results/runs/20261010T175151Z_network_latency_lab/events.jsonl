@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T17:51:51.545Z", "event": "manifest_validated", "manifest": "C:\\Projects\\microservices-demo\\chaos\\latency-lab.yaml"}
+{"ts": "2026-10-10T17:51:51.684Z", "event": "lab_created", "pods": ["chaos-lab-server", "chaos-lab-client"]}
+{"ts": "2026-10-10T17:51:52.642Z", "event": "lab_ready", "server_ip": "10.244.0.20", "qdisc_before": "qdisc noqueue 0: root refcnt 2"}
+{"ts": "2026-10-10T17:51:55.685Z", "event": "measured", "phase": "before", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 0.93, "http_total_ms_p95": 1.06, "http_connect_ms_median": 0.12, "ping_avg_ms": 0.075, "ping_min_ms": 0.031, "ping_raw": null}
+{"ts": "2026-10-10T17:51:55.911Z", "event": "fault_injected", "qdisc": "qdisc netem 8004: root refcnt 13 limit 1000 delay 200ms seed 12144244450878651019", "delay_ms": 200, "self_removal_after_s": 40}
+{"ts": "2026-10-10T17:52:05.165Z", "event": "measured", "phase": "during", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 401.83, "http_total_ms_p95": 404.72, "http_connect_ms_median": 200.29, "ping_avg_ms": 200.107, "ping_min_ms": 200.066, "ping_raw": null}
+{"ts": "2026-10-10T17:52:05.402Z", "event": "fault_removed", "qdisc_after": "qdisc noqueue 0: root refcnt 2", "verified": true, "fault_duration_s": 9.72}
+{"ts": "2026-10-10T17:52:08.489Z", "event": "measured", "phase": "after", "requests": 15, "ok": 15, "errors": [], "http_total_ms_median": 1.65, "http_total_ms_p95": 2.05, "http_connect_ms_median": 0.24, "ping_avg_ms": 0.051, "ping_min_ms": 0.033, "ping_raw": null}
+{"ts": "2026-10-10T17:52:08.490Z", "event": "verdict", "status": "PASS", "all_requests_ok_before_and_after": true, "ping_increase_during_ms": 200.03, "http_increase_during_ms": 400.9, "ping_after_minus_before_ms": -0.02, "netem_removed_verified": true, "delay_visible_during": true, "delay_gone_after": true}
+{"ts": "2026-10-10T17:52:08.589Z", "event": "cleanup", "steps": ["lab pods deleted rc=0"]}

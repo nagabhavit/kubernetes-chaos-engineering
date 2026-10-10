@@ -1,6 +1,32 @@
 ﻿# Kubernetes Chaos Engineering — Online Boutique
 
-A local Kubernetes resilience experiment using Kind, Locust, and Python to observe application behavior during a controlled microservice disruption.
+AI-planned, safety-controlled chaos experiments on Google's Online Boutique in a local kind cluster. A local Ollama planner and a LangGraph workflow sit on top of a deterministic safety controller. Three application fault types (outage, pod crash, traffic spike) produce a ranked findings report. Network latency (`tc netem`) is validated separately on disposable lab pods. All AI runs locally, with no cloud API.
+
+
+## Quick start (Day 2: AI-planned, safety-controlled chaos)
+
+```powershell
+.\.venv313\Scripts\Activate.ps1
+pip install -r requirements.txt            # LangGraph, Locust, Streamlit, ...
+ollama pull qwen2.5:3b                     # free local planner model
+python -m pytest tests -q                  # 62 safety tests on fakes (touches nothing)
+python chaos\cli.py health                 # cluster, frontend, models, kill switch
+python chaos\cli.py plan                   # AI ranks experiments (no execution)
+python chaos\cli.py dry-run --rank 1       # full workflow, nothing injected
+python chaos\cli.py run --rank 1           # asks for human approval, then injects
+python chaos\cli.py report                 # results\findings-report.md
+python chaos\cli.py latency-lab --delay-ms 200   # netem on disposable lab pods: before/during/after
+```
+
+| Document | Purpose |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | One-page architecture: agents, workflow, safety controls |
+| [docs/CLEAN_RUN.md](docs/CLEAN_RUN.md) | From-scratch setup, the three experiments, cleanup, troubleshooting |
+| [docs/AGENTS_AND_QA.md](docs/AGENTS_AND_QA.md) | Each agent's inputs and outputs; likely judge questions |
+| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 3-minute demo script and recording checklist |
+| [docs/TEAM_FORM.md](docs/TEAM_FORM.md) | Team submission form (tools, models, libraries, data) |
+| [results/findings-report.md](results/findings-report.md) | Ranked findings with evidence, fixes and resilience score |
+| [architecture/workflow-graph.md](architecture/workflow-graph.md) | LangGraph workflow diagram (generated) |
 
 ## Overview
 
@@ -177,7 +203,7 @@ streamlit run ui\app.py             # window 2: UI on localhost:8501
 
 `chaos/planner.py` gives an LLM the dependency map, the baseline and previous run results, along with the allowed catalog. The model returns ranked JSON proposals, each with a target, fault type, duration, hypothesis, expected impact and reason.
 
-- **Free local model by default:** [Ollama](https://ollama.com) with `qwen2.5:3b`. There is no account, API key or cost, and no data leaves the laptop. Anthropic Claude is optional (`CHAOS_PLANNER_PROVIDER=anthropic`, paid).
+- **Free local model by default:** [Ollama](https://ollama.com) with `qwen2.5:3b`. There is no account, API key or cost, and no data leaves the laptop. No cloud API is used at runtime.
 - **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete` only, integer 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
 - **The AI never executes anything.** A proposal runs only when a human approves it in the UI (`POST /planner/run`). It is re-validated at that point and then goes through `controller.py`.
 - **Model unavailable or unusable output:** the planner falls back to a clearly labelled **rule-based** planner (fan-in plus untested edges). It is never presented as AI.

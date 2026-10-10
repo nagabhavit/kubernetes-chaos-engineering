@@ -1,0 +1,138 @@
+{
+  "workflow_id": "WF-20261010T174253Z",
+  "mode": "dry_run",
+  "rank": 1,
+  "manual": {
+    "target": "productcatalogservice",
+    "fault_type": "scale_to_zero",
+    "duration_seconds": 20,
+    "hypothesis": "Manual scale_to_zero on productcatalogservice",
+    "reason": "manual experiment chosen by a human",
+    "expected_impact": "see results"
+  },
+  "plan": {
+    "planner": "manual (human-specified)",
+    "model": null,
+    "experiments": [
+      {
+        "target": "productcatalogservice",
+        "fault_type": "scale_to_zero",
+        "duration_seconds": 20,
+        "parameters": {},
+        "abort_conditions": {
+          "max_error_rate": 0.2,
+          "max_p95_ms": 1000,
+          "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+          "kill_switch": "chaos/KILL file or Ctrl+C"
+        },
+        "recovery_verification": "restore original replica count; kubectl rollout status; 5 consecutive successful frontend requests",
+        "hypothesis": "Manual scale_to_zero on productcatalogservice",
+        "expected_impact": "see results",
+        "reason": "manual experiment chosen by a human",
+        "rank": 1,
+        "experiment_id": "EXP-20261010T174253Z-1"
+      }
+    ],
+    "rejected": [],
+    "raw_proposals": [
+      {
+        "target": "productcatalogservice",
+        "fault_type": "scale_to_zero",
+        "duration_seconds": 20,
+        "hypothesis": "Manual scale_to_zero on productcatalogservice",
+        "reason": "manual experiment chosen by a human",
+        "expected_impact": "see results"
+      }
+    ]
+  },
+  "proposal": {
+    "target": "productcatalogservice",
+    "fault_type": "scale_to_zero",
+    "duration_seconds": 20,
+    "parameters": {},
+    "abort_conditions": {
+      "max_error_rate": 0.2,
+      "max_p95_ms": 1000,
+      "telemetry_loss": "3 consecutive connection errors or no probe for 5 s",
+      "kill_switch": "chaos/KILL file or Ctrl+C"
+    },
+    "recovery_verification": "restore original replica count; kubectl rollout status; 5 consecutive successful frontend requests",
+    "hypothesis": "Manual scale_to_zero on productcatalogservice",
+    "expected_impact": "see results",
+    "reason": "manual experiment chosen by a human",
+    "rank": 1,
+    "experiment_id": "EXP-20261010T174253Z-1",
+    "grounding": "n/a (manual)",
+    "evidence": null,
+    "planner": "manual (human-specified)",
+    "planner_model": null
+  },
+  "approval": {
+    "approved": true,
+    "by": "dry-run (no fault will be injected)"
+  },
+  "execution": {
+    "dry_run": true,
+    "command": [
+      "C:\\Projects\\microservices-demo\\.venv313\\Scripts\\python.exe",
+      "-u",
+      "C:\\Projects\\microservices-demo\\chaos\\controller.py",
+      "--target",
+      "productcatalogservice",
+      "--fault",
+      "scale_to_zero",
+      "--duration",
+      "20",
+      "--baseline",
+      "15",
+      "--post",
+      "30",
+      "--recovery-timeout",
+      "120",
+      "--url",
+      "http://localhost:8080",
+      "--label",
+      "workflow WF-20261010T174253Z EXP-20261010T174253Z-1 (manual (human-specified)): Manual scale_to_zero on productcatalogservice",
+      "--max-error-rate",
+      "0.2",
+      "--max-p95-ms",
+      "1000"
+    ],
+    "exit_code": null,
+    "run_id": null,
+    "watchdog_fired": false
+  },
+  "outcome": "DRY_RUN (no fault injected)",
+  "steps": [
+    {
+      "node": "collect_state",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "9 previous runs; health {'reachable': True, 'degraded_deployments': []}"
+    },
+    {
+      "node": "plan",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "manual proposal supplied"
+    },
+    {
+      "node": "validate",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "EXP-20261010T174253Z-1 passed"
+    },
+    {
+      "node": "approve",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "dry run"
+    },
+    {
+      "node": "execute",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "dry run: C:\\Projects\\microservices-demo\\chaos\\controller.py --target productcatalogservice --fault scale_to_zero --duration 20 --baseline 15 --post 30 --recovery-timeout 120 --url http://localhost:8080 --label workflow WF-20261010T174253Z EXP-20261010T174253Z-1 (manual (human-specified)): Manual scale_to_zero on productcatalogservice --max-error-rate 0.2 --max-p95-ms 1000"
+    },
+    {
+      "node": "save",
+      "at": "2026-10-10T17:42:53+00:00",
+      "note": "C:\\Projects\\microservices-demo\\results\\workflows\\WF-20261010T174253Z.json"
+    }
+  ]
+}

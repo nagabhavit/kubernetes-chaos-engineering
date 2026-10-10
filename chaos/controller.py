@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import math
+import os
 import signal
 import socket
 import subprocess
@@ -29,6 +31,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,17 +48,30 @@ ALLOWED_TARGETS = frozenset({
 # scale_to_zero: deployment -> 0 replicas for the duration, then restored (service unavailability)
 # pod_delete:    delete the target's pods once; Kubernetes recreates them (pod failure / crash)
 # traffic_spike: sudden Locust load (spike_users) against the frontend for the duration, then stopped
-FAULT_TYPES = frozenset({"scale_to_zero", "pod_delete", "traffic_spike"})
+# network_latency: netem delay on ONE target pod's interface, added by a temporary netshoot debug
+#                  container that removes the delay itself after the duration (self-reverting)
+FAULT_TYPES = frozenset({"scale_to_zero", "pod_delete", "traffic_spike", "network_latency"})
 SPIKE_TARGET = "frontend"    # traffic_spike changes no Kubernetes object; it only adds HTTP load at the entry point
 MAX_SPIKE_USERS = 150
 MAX_DURATION_S = 60          # hard cap, not overridable from the CLI
 MAX_LOAD_USERS = 50
+MAX_CONSECUTIVE_FAILURES = 3  # abort after this many failed probes in a row, however sparse the window
+MAX_SPAWN_RATE = 20          # users started per second for a spike (conservative)
+MIN_DELAY_MS, MAX_DELAY_MS = 20, 500
+NETEM_IMAGE = "nicolaka/netshoot:v0.13"
+# network_latency on APPLICATION pods is disabled (empty allowlist) until it has been validated.
+# The mechanism is validated on disposable pods with chaos/netem_lab.py instead.
+NETEM_APP_TARGETS: frozenset = frozenset()
 
 REPO = Path(__file__).resolve().parent.parent
-KILL_FILE = REPO / "chaos" / "KILL"
-STATE_FILE = REPO / "chaos" / "state" / "active_fault.json"
-RUNS_DIR = REPO / "results" / "runs"
+# Tests relocate all mutable files (kill switch, state, run records) with CHAOS_DATA_DIR and
+# replace kubectl with a fake via CHAOS_KUBECTL, so unit tests never touch the real cluster.
+DATA = Path(os.getenv("CHAOS_DATA_DIR") or REPO)
+KILL_FILE = DATA / "chaos" / "KILL"
+STATE_FILE = DATA / "chaos" / "state" / "active_fault.json"
+RUNS_DIR = DATA / "results" / "runs"
 PROBE_PATHS = ("/", "/product/OLJCESPC7Z", "/cart")
+LOCUSTFILE = os.getenv("CHAOS_LOCUSTFILE") or str(REPO / "src" / "loadgenerator" / "locustfile.py")
 
 
 def utc_now() -> str:
@@ -85,8 +101,14 @@ class EventLog:
 
 
 # --------------------------------------------------------------------------- kubectl (no shell)
+def _kubectl_base() -> list[str]:
+    k = os.getenv("CHAOS_KUBECTL", "kubectl")
+    return [sys.executable, k] if k.endswith(".py") else [k]
+
+
 def kubectl(*args: str, timeout: float = 30) -> subprocess.CompletedProcess:
-    cmd = ["kubectl", "--context", CONTEXT, "-n", NAMESPACE, *args]
+    """Every cluster call goes through here: fixed context + namespace, timeout, no shell."""
+    cmd = [*_kubectl_base(), "--context", CONTEXT, "-n", NAMESPACE, *args]
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
@@ -114,7 +136,66 @@ def scale(name: str, replicas: int) -> subprocess.CompletedProcess:
     return kubectl("scale", f"deployment/{name}", f"--replicas={replicas}")
 
 
+# --------------------------------------------------------------------------- network latency (netem)
+def target_pod(target: str) -> str:
+    r = kubectl("get", "pods", "-l", f"app={target}", "-o", "json")
+    if r.returncode != 0:
+        raise RuntimeError(f"cannot list pods for {target}: {r.stderr.strip()}")
+    pods = [p["metadata"]["name"] for p in json.loads(r.stdout)["items"]
+            if p.get("status", {}).get("phase") == "Running"]
+    if not pods:
+        raise RuntimeError(f"no running pod for {target}")
+    return sorted(pods)[0]
+
+
+def inject_latency(pod: str, container: str, delay_ms: int, duration_s: int) -> subprocess.CompletedProcess:
+    """Ephemeral netshoot container in the pod's network namespace. Its script removes the delay
+    itself after duration_s (+5 s grace), so the fault reverts even if this controller dies."""
+    script = (f"tc qdisc add dev eth0 root netem delay {int(delay_ms)}ms && echo NETEM_ADDED; "
+              f"sleep {int(duration_s) + 5}; tc qdisc del dev eth0 root 2>/dev/null; echo NETEM_REMOVED")
+    return kubectl("debug", f"pod/{pod}", "--profile=netadmin", f"--image={NETEM_IMAGE}",
+                   f"--container={container}", "--", "sh", "-c", script, timeout=60)
+
+
+def remove_latency(pod: str, container: str) -> tuple[bool, str]:
+    """Remove the netem qdisc now. If the debug container already exited, its script removed it."""
+    r = kubectl("exec", pod, "-c", container, "--", "sh", "-c",
+                "tc qdisc del dev eth0 root 2>/dev/null; tc qdisc show dev eth0", timeout=30)
+    if r.returncode == 0:
+        return "netem" not in r.stdout, r.stdout.strip()
+    err = (r.stderr or "").lower()
+    if "not found" in err or "not running" in err or "completed" in err or "terminated" in err:
+        return True, "debug container already exited (its script removed the delay)"
+    return False, r.stderr.strip()
+
+
 # --------------------------------------------------------------------------- HTTP probe (control signal)
+def probe_once(host: str, port: int, path: str, timeout: float) -> tuple[int | None, str]:
+    """One GET, with the TCP connect and the HTTP exchange classified separately:
+         conn_error : could not connect (frontend / port-forward unreachable)  -> telemetry loss
+         timeout    : connected, but no response in time (application slow)    -> fault impact
+         http_error : connected, HTTP status >= 400                             -> fault impact
+    Windows does not refuse a closed localhost port instantly (the connect retries until the
+    timeout), so connect failures must be detected at the connect step, not inferred from errors."""
+    conn = http.client.HTTPConnection(host, port, timeout=timeout)
+    try:
+        try:
+            conn.connect()
+        except OSError:                       # refused, unreachable, or connect timed out
+            return None, "conn_error"
+        try:
+            conn.request("GET", path, headers={"Connection": "close"})
+            resp = conn.getresponse()
+            resp.read()
+        except (socket.timeout, TimeoutError):
+            return None, "timeout"
+        except (ConnectionError, http.client.HTTPException, OSError):
+            return None, "conn_error"         # connection dropped mid-exchange (e.g. port-forward died)
+        return resp.status, ("ok" if resp.status < 400 else "http_error")
+    finally:
+        conn.close()
+
+
 class Prober(threading.Thread):
     def __init__(self, base_url: str, interval: float, timeout: float, csv_path: Path):
         super().__init__(daemon=True)
@@ -125,7 +206,9 @@ class Prober(threading.Thread):
         self.lock = threading.Lock()
         self.stop_evt = threading.Event()
         self.consecutive_conn_errors = 0
-        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        self.consecutive_failures = 0      # any non-OK probe: HTTP error, timeout or connection error
+        u = urlsplit(self.base_url)
+        self.host, self.port = u.hostname, u.port or 80
         self.csv_file = csv_path.open("w", newline="", encoding="utf-8")
         self.writer = csv.writer(self.csv_file)
         self.writer.writerow(["unix_ts", "utc", "path", "status", "kind", "ok", "latency_ms"])
@@ -136,24 +219,13 @@ class Prober(threading.Thread):
             path = PROBE_PATHS[i % len(PROBE_PATHS)]
             i += 1
             t0 = time.time()
-            status, kind = None, "ok"
-            try:
-                with self.opener.open(self.base_url + path, timeout=self.timeout) as resp:
-                    resp.read()
-                    status = resp.status
-            except urllib.error.HTTPError as e:
-                status, kind = e.code, "http_error"
-            except urllib.error.URLError as e:
-                kind = "timeout" if isinstance(e.reason, (socket.timeout, TimeoutError)) else "conn_error"
-            except (socket.timeout, TimeoutError):
-                kind = "timeout"
-            except (ConnectionError, OSError):
-                kind = "conn_error"
+            status, kind = probe_once(self.host, self.port, path, self.timeout)
             latency = (time.time() - t0) * 1000
             ok = kind == "ok" and status is not None and 200 <= status < 400
             with self.lock:
                 self.samples.append((t0, ok, latency, kind, status))
                 self.consecutive_conn_errors = self.consecutive_conn_errors + 1 if kind == "conn_error" else 0
+                self.consecutive_failures = 0 if ok else self.consecutive_failures + 1
             self.writer.writerow([f"{t0:.3f}", iso(t0), path, status, kind, int(ok), f"{latency:.1f}"])
             self.csv_file.flush()
             self.stop_evt.wait(max(0.0, self.interval - (time.time() - t0)))
@@ -166,6 +238,7 @@ class Prober(threading.Thread):
         with self.lock:
             s = [x for x in self.samples if x[0] >= lo and x[3] != "conn_error"]
             conn = self.consecutive_conn_errors
+            fails = self.consecutive_failures
             last_t = self.samples[-1][0] if self.samples else None
         n = len(s)
         errors = sum(1 for x in s if not x[1])
@@ -173,7 +246,8 @@ class Prober(threading.Thread):
         p95 = lat[max(0, math.ceil(0.95 * n) - 1)] if n else None
         return {"n": n, "errors": errors, "error_rate": (errors / n) if n else None,
                 "p95_ms": round(p95, 1) if p95 is not None else None,
-                "consecutive_conn_errors": conn, "last_sample_age_s": (now - last_t) if last_t else None}
+                "consecutive_conn_errors": conn, "consecutive_failures": fails,
+                "last_sample_age_s": (now - last_t) if last_t else None}
 
     def samples_since(self, t: float) -> list:
         with self.lock:
@@ -192,6 +266,11 @@ def validate(args) -> list[str]:
         errs.append(f"target '{args.target}' not in allowlist {sorted(ALLOWED_TARGETS)}")
     if args.fault not in FAULT_TYPES:
         errs.append(f"fault '{args.fault}' not supported {sorted(FAULT_TYPES)}")
+    if args.fault == "network_latency" and args.target not in NETEM_APP_TARGETS:
+        errs.append("network_latency on application pods is disabled; validate the mechanism on disposable "
+                    "pods with: python chaos\\netem_lab.py")
+    if args.fault == "network_latency" and not (MIN_DELAY_MS <= args.delay_ms <= MAX_DELAY_MS):
+        errs.append(f"delay-ms must be {MIN_DELAY_MS}..{MAX_DELAY_MS}")
     if not (1 <= args.duration <= MAX_DURATION_S):
         errs.append(f"duration {args.duration}s outside 1..{MAX_DURATION_S}s")
     if not (0.0 < args.max_error_rate <= 1.0):
@@ -235,6 +314,50 @@ def restore(log: EventLog, target: str, replicas: int, attempts: int = 3) -> boo
     return False
 
 
+def capture_events(target: str, since: float, path: Path) -> int:
+    """Save Kubernetes events for the target with ABSOLUTE timestamps (not relative ages)."""
+    r = kubectl("get", "events", "-o", "json", timeout=30)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.strip())
+    out = []
+    for e in json.loads(r.stdout).get("items", []):
+        name = (e.get("involvedObject") or {}).get("name", "")
+        ts = e.get("lastTimestamp") or e.get("eventTime") or e.get("firstTimestamp") or ""
+        if not name.startswith(target) or not ts:
+            continue
+        try:
+            t = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            continue
+        if t >= since - 5:
+            out.append({"time": ts, "type": e.get("type"), "reason": e.get("reason"),
+                        "object": f"{(e.get('involvedObject') or {}).get('kind')}/{name}",
+                        "message": (e.get("message") or "")[:300], "count": e.get("count")})
+    out.sort(key=lambda x: x["time"])
+    path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    return len(out)
+
+
+def stop_latency(log: EventLog, netem) -> bool:
+    if netem is None:
+        log("restore_ok", action="latency was never injected")
+        return True
+    pod, container = netem
+    for i in range(1, 4):
+        try:
+            ok, detail = remove_latency(pod, container)
+        except Exception as e:  # noqa: BLE001
+            ok, detail = False, repr(e)
+        if ok:
+            log("restore_ok", action="netem delay removed", pod=pod, detail=detail, attempt=i)
+            return True
+        log("restore_failed", attempt=i, detail=detail)
+        time.sleep(1.0)
+    # No pod-delete fallback: never delete an application pod. The debug container's own timer
+    # removes the delay; the state file is kept so restore.py / a human can verify it.
+    return False
+
+
 def stop_spike(log: EventLog, proc) -> bool:
     if proc is None:
         log("restore_ok", action="no spike process was started")
@@ -270,6 +393,7 @@ def main() -> int:
     ap.add_argument("--url", default="http://localhost:8080")
     ap.add_argument("--load-users", type=int, default=0, help="also run Locust with N users (0 = probe only)")
     ap.add_argument("--spike-users", type=int, default=80, help=f"traffic_spike: Locust users (max {MAX_SPIKE_USERS})")
+    ap.add_argument("--delay-ms", type=int, default=200, help=f"network_latency: delay {MIN_DELAY_MS}..{MAX_DELAY_MS} ms")
     ap.add_argument("--label", default="", help="free-text note stored in summary")
     args = ap.parse_args()
 
@@ -289,6 +413,7 @@ def main() -> int:
     prober = None
     locust = None
     spike = None
+    netem = None   # (pod, container) while a latency fault may be active
     status = "PRECHECK_FAILED"
     fault_attempted = False
     original = None
@@ -323,7 +448,7 @@ def main() -> int:
         if args.load_users:
             run_time = int(args.baseline + args.duration + args.recovery_timeout + args.post + 10)
             locust = subprocess.Popen([
-                sys.executable, "-m", "locust", "-f", str(REPO / "src" / "loadgenerator" / "locustfile.py"),
+                sys.executable, "-m", "locust", "-f", LOCUSTFILE,
                 "--host", args.url, "--headless", "--users", str(args.load_users), "--spawn-rate", "2",
                 "--run-time", f"{run_time}s", "--csv", str(run_dir / "locust"), "--csv-full-history",
                 "--only-summary"], cwd=str(REPO))
@@ -347,15 +472,23 @@ def main() -> int:
         t_inject = time.time()
         if args.fault == "traffic_spike":
             spike = subprocess.Popen([
-                sys.executable, "-m", "locust", "-f", str(REPO / "src" / "loadgenerator" / "locustfile.py"),
+                sys.executable, "-m", "locust", "-f", LOCUSTFILE,
                 "--host", args.url, "--headless", "--users", str(args.spike_users),
-                "--spawn-rate", str(args.spike_users), "--run-time", f"{args.duration + 10}s",
+                "--spawn-rate", str(min(args.spike_users, MAX_SPAWN_RATE)), "--run-time", f"{args.duration + 10}s",
                 "--csv", str(run_dir / "spike"), "--csv-full-history", "--only-summary"],
                 cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             STATE_FILE.write_text(json.dumps({"run_id": run_id, "target": args.target, "fault": args.fault,
                                               "original_replicas": original, "spike_pid": spike.pid,
                                               "written": utc_now()}), encoding="utf-8")
             r = subprocess.CompletedProcess([], 0 if spike.poll() is None else 1, "", "locust exited immediately")
+        elif args.fault == "network_latency":
+            pod = target_pod(args.target)
+            container = f"chaos-netem-{run_id[9:15]}"
+            netem = (pod, container)
+            STATE_FILE.write_text(json.dumps({"run_id": run_id, "target": args.target, "fault": args.fault,
+                                              "original_replicas": original, "pod": pod, "container": container,
+                                              "written": utc_now()}), encoding="utf-8")
+            r = inject_latency(pod, container, args.delay_ms, args.duration)
         elif args.fault == "pod_delete":
             r = kubectl("delete", "pod", "-l", f"app={args.target}", "--wait=false")
         else:
@@ -364,7 +497,9 @@ def main() -> int:
             raise RuntimeError(f"injection failed: {r.stderr.strip()}")
         log("fault_injected", target=args.target, fault=args.fault, at=iso(t_inject),
             detail=(r.stdout.strip().replace("\n", "; ") if args.fault == "pod_delete" else
-                    f"spike_users={args.spike_users}" if args.fault == "traffic_spike" else "replicas=0"))
+                    f"spike_users={args.spike_users}" if args.fault == "traffic_spike" else
+                    f"delay_ms={args.delay_ms} pod={netem[0]} container={netem[1]}" if args.fault == "network_latency"
+                    else "replicas=0"))
 
         # ---------------- observe with guards
         deadline = t_inject + args.duration
@@ -382,6 +517,13 @@ def main() -> int:
             if w["consecutive_conn_errors"] >= 3 or (w["last_sample_age_s"] or 0) > args.probe_timeout + 3:
                 status = "ABORTED_TELEMETRY_LOST"
                 log("telemetry_lost", **w)
+                break
+            if w["consecutive_failures"] >= MAX_CONSECUTIVE_FAILURES:
+                # Does not depend on the window having min_samples: on Windows an unreachable frontend makes
+                # every probe hang until its timeout, so the window can stay sparse for the whole fault.
+                status = "ABORTED_THRESHOLD"
+                log("threshold_breach", metric="consecutive_failed_probes", value=w["consecutive_failures"],
+                    limit=MAX_CONSECUTIVE_FAILURES, **w)
                 break
             if w["n"] >= args.min_samples:
                 if w["error_rate"] > args.max_error_rate:
@@ -409,6 +551,8 @@ def main() -> int:
                 t_restore = time.time()
                 if args.fault == "traffic_spike":
                     ok = stop_spike(log, spike)
+                elif args.fault == "network_latency":
+                    ok = stop_latency(log, netem)
                 else:
                     ok = restore(log, args.target, original)
                 cleanup = "ok" if ok else "FAILED"
@@ -447,7 +591,7 @@ def main() -> int:
                 s = prober.samples_since(search_from)
                 streak, start = 0, None
                 for x in s:
-                    if x[1] and (args.fault != "traffic_spike" or x[2] <= args.max_p95_ms):
+                    if x[1] and (args.fault not in ("traffic_spike", "network_latency") or x[2] <= args.max_p95_ms):
                         start = x[0] if streak == 0 else start
                         streak += 1
                         if streak >= args.recovery_streak:
@@ -462,6 +606,11 @@ def main() -> int:
                     not any(not x[1] and x[3] != "conn_error" for x in prober.samples_since(t_inject)):
                 recovery.update(verified=True, user_recovery_s=None, note="no user-facing errors observed")
                 log("recovered", note="no user-facing errors observed")
+            elif first_ok and not recovery.get("k8s_rollout_ok"):
+                # users get pages again, but Kubernetes does not report the deployment ready: not recovered
+                recovery.update(user_recovery_s=round(first_ok - ref, 2), recovered_at=iso(first_ok),
+                                note="user requests succeed but rollout status did not report ready")
+                log("recovery_unverified", reason="rollout not ready", user_recovery_s=recovery["user_recovery_s"])
             elif first_ok:
                 recovery.update(verified=True, user_recovery_s=round(first_ok - ref, 2), recovered_at=iso(first_ok))
                 log("recovered", user_recovery_s=recovery["user_recovery_s"])
@@ -503,6 +652,11 @@ def main() -> int:
             locust.kill()
         log("load_stopped")
 
+    if t_inject:
+        try:
+            summary["k8s_events_captured"] = capture_events(args.target, t_inject, run_dir / "k8s_events.json")
+        except Exception as e:  # noqa: BLE001  (evidence capture must never break cleanup reporting)
+            log("k8s_events_capture_failed", error=repr(e))
     summary.update(status=status, cleanup=cleanup, fault_injected_at=iso(t_inject), restore_issued_at=iso(t_restore),
                    fault_duration_s=round(t_restore - t_inject, 2) if t_inject and t_restore else None,
                    recovery=recovery, finished=utc_now())

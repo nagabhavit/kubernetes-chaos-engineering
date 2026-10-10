@@ -1,6 +1,7 @@
-# Feasibility check for the network-latency experiment (Day 2).
-# A disposable pod adds a 100 ms netem delay to ITS OWN interface, measures it, removes it, and exits.
-# It changes nothing in any other pod or service. Delete it afterwards.
+# Quick netem FEASIBILITY check (kernel + NET_ADMIN). For the full measured validation use:
+#   python chaos\netem_lab.py
+# This disposable pod adds a 100 ms delay to ITS OWN interface, measures, removes it, and exits.
+# Every curl line prints its exit code and HTTP code, so failures are visible instead of blank.
 apiVersion: v1
 kind: Pod
 metadata:
@@ -9,7 +10,7 @@ metadata:
   labels: {purpose: chaos-feasibility-check}
 spec:
   restartPolicy: Never
-  activeDeadlineSeconds: 120
+  activeDeadlineSeconds: 900
   containers:
   - name: netshoot
     image: nicolaka/netshoot:v0.13
@@ -18,11 +19,18 @@ spec:
     command: ["sh", "-c"]
     args:
     - |
-      set -e
-      echo "before:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
-      tc qdisc add dev eth0 root netem delay 100ms
+      URL=http://frontend.boutique.svc.cluster.local/_healthz
+      t() {
+        for i in 1 2 3 4 5; do
+          out=$(curl -sS -m 5 -o /dev/null -w '%{http_code} %{time_total}' "$URL" 2>&1)
+          echo "  curl rc=$? http_code+seconds: $out"
+        done
+      }
+      echo "before:"; t
+      tc qdisc add dev eth0 root netem delay 100ms || { echo "NETEM_ADD_FAILED"; exit 1; }
       tc qdisc show dev eth0
-      echo "with 100ms netem:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
-      tc qdisc del dev eth0 root
-      echo "after removal:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
+      echo "with 100ms netem:"; t
+      tc qdisc del dev eth0 root || { echo "NETEM_DEL_FAILED"; exit 1; }
+      tc qdisc show dev eth0 | grep -q netem && { echo "NETEM_STILL_PRESENT"; exit 1; }
+      echo "after removal:"; t
       echo NETEM_OK

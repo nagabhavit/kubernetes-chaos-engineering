@@ -43,7 +43,7 @@ FAULT_TYPES = {
     "Service unavailability (scale to 0)": "service_unavailability",
     "Pod failure (delete pod, K8s self-heals)": "pod_failure",
     "Traffic spike (sudden load on frontend)": "traffic_spike",
-    "Latency injection (not implemented yet)": "latency",
+    "Network latency (lab only: run python chaos\\netem_lab.py)": "latency",
 }
 
 ERROR_TYPES = [
@@ -307,7 +307,8 @@ else:
             st.caption(f"LLM not used: {plan['llm_error']}")
         df = pd.DataFrame([{"rank": e["rank"], "target": e["target"], "fault": e["fault_type"],
                             "duration_s": e["duration_seconds"], "reason": e["reason"],
-                            "hypothesis": e["hypothesis"], "expected_impact": e.get("expected_impact", "")}
+                            "hypothesis": e["hypothesis"], "expected_impact": e.get("expected_impact", ""),
+                            "grounding": e.get("grounding", "")}
                            for e in plan["experiments"]])
         st.dataframe(df, use_container_width=True, hide_index=True)
         if plan.get("rejected"):
