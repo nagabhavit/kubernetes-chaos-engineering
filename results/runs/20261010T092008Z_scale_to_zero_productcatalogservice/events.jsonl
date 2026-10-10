@@ -1,0 +1,12 @@
+{"ts": "2026-10-10T09:20:08.667Z", "event": "run_started", "run_id": "20261010T092008Z_scale_to_zero_productcatalogservice", "target": "productcatalogservice", "fault": "scale_to_zero", "duration": 45}
+{"ts": "2026-10-10T09:20:08.998Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7"}
+{"ts": "2026-10-10T09:20:09.052Z", "event": "load_started", "users": 10, "max_run_time_s": 220}
+{"ts": "2026-10-10T09:20:24.093Z", "event": "baseline", "n": 54, "errors": 0, "error_rate": 0.0, "p95_ms": 398.1, "consecutive_conn_errors": 0, "last_sample_age_s": 0.3133566379547119}
+{"ts": "2026-10-10T09:20:24.503Z", "event": "fault_injected", "target": "productcatalogservice", "replicas": 0, "at": "2026-10-10T09:20:24.099Z"}
+{"ts": "2026-10-10T09:20:27.114Z", "event": "threshold_breach", "metric": "error_rate", "value": 0.308, "limit": 0.2, "n": 13, "errors": 4, "error_rate": 0.3076923076923077, "p95_ms": 2010.6, "consecutive_conn_errors": 0, "last_sample_age_s": 0.04625725746154785}
+{"ts": "2026-10-10T09:20:27.301Z", "event": "restore_ok", "target": "productcatalogservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T09:20:29.758Z", "event": "rollout_status", "ok": true, "out": "Waiting for deployment \"productcatalogservice\" rollout to finish: 0 of 1 updated replicas are available...\ndeployment \"productcatalogservice\" successfully rolled out"}
+{"ts": "2026-10-10T09:20:48.278Z", "event": "recovered", "user_recovery_s": 19.78}
+{"ts": "2026-10-10T09:21:18.284Z", "event": "post_window", "n": 111, "errors": 0, "error_rate": 0.0, "p95_ms": 317.7, "consecutive_conn_errors": 0, "last_sample_age_s": 0.35489463806152344}
+{"ts": "2026-10-10T09:21:18.364Z", "event": "load_stopped"}
+{"ts": "2026-10-10T09:21:18.370Z", "event": "run_finished", "status": "ABORTED_THRESHOLD", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T092008Z_scale_to_zero_productcatalogservice\\summary.json"}
