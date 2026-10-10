@@ -227,6 +227,11 @@ def validate(raw, stamp: str = None) -> tuple[list, list]:
 # --------------------------------------------------------------------------- grounding (truthfulness)
 HISTORY_CLAIM = re.compile(r"\b(previous|prior|earlier|past|last)\b.{0,40}\b(runs?|experiments?|tests?)\b|"
                            r"\b(runs?|experiments?) (showed|revealed|indicated)", re.I)
+# a claim about what past runs SHOWED: user-facing errors/outage vs. no impact
+CLAIM_IMPACT = re.compile(r"\b(errors?|error[ -]rates?|outages?|fail(ed|ures?|ing)?|5\d\d|down(time)?|unavailab\w*|"
+                          r"broke|break(s|ing)?)\b", re.I)
+CLAIM_NO_IMPACT = re.compile(r"\b(no (user[- ])?(impact|errors?|failures?)|zero errors|0 errors|"
+                             r"degrad\w* gracefully|unaffected|resilient)\b", re.I)
 
 
 def ground(accepted: list, ctx: dict) -> list:
@@ -240,12 +245,22 @@ def ground(accepted: list, ctx: dict) -> list:
         same = [h for h in on_t if h["fault"] == f]
         callers = sorted({e["from"] for e in edges if e["to"] == t})
         issues = []
-        if HISTORY_CLAIM.search(p.get("reason", "") + " " + p.get("hypothesis", "")):
+        reason = p.get("reason", "")
+        basis = same or on_t                       # the runs a claim about this target/fault refers to
+        errs = [h.get("errors_in_fault") for h in basis if h.get("errors_in_fault") is not None]
+        if HISTORY_CLAIM.search(reason + " " + p.get("hypothesis", "")):
             if not on_t:
                 issues.append(f"cites previous runs, but no run on {t} exists")
-            elif not same and re.search(f.replace("_", "[ _-]?"), p.get("reason", ""), re.I):
+            elif not same and re.search(f.replace("_", "[ _-]?"), reason, re.I):
                 issues.append(f"cites previous {f} runs on {t}, but none exist")
+            # outcome check (reason only: the hypothesis is a prediction, the reason claims what was SEEN)
+            elif HISTORY_CLAIM.search(reason) and errs:
+                if CLAIM_IMPACT.search(reason) and not CLAIM_NO_IMPACT.search(reason) and sum(errs) == 0:
+                    issues.append(f"claims past errors/outage, but recorded runs on {t} had 0 errors in the fault window")
+                elif CLAIM_NO_IMPACT.search(reason) and sum(errs) > 0:
+                    issues.append(f"claims no past impact, but recorded runs on {t} had {sum(errs)} errors in the fault window")
         p["evidence"] = {"previous_runs_on_target": len(on_t), "previous_runs_same_fault": len(same),
+                         "previous_errors_in_fault": sum(errs) if errs else None,
                          "callers_in_dependency_map": callers}
         p["grounding"] = "ok" if not issues else "UNSUPPORTED: " + "; ".join(issues)
     ordered = [p for p in accepted if p["grounding"] == "ok"] + [p for p in accepted if p["grounding"] != "ok"]

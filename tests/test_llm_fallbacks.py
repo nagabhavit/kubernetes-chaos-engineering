@@ -94,3 +94,30 @@ def test_planner_reasons_citing_nonexistent_history_are_flagged(monkeypatch, sho
     assert by_t["redis-cart"]["rank"] == 3                               # unsupported ranked last
     assert by_t["productcatalogservice"]["evidence"]["previous_runs_on_target"] == 1
     assert [e["experiment_id"][-1] for e in plan["experiments"]] == ["1", "2", "3"]
+
+
+def test_planner_reason_contradicting_recorded_outcome_is_flagged():
+    """qwen2.5:3b on the user's machine: 'Previous runs showed traffic spikes led to error rate increases'
+    while the recorded spike run had 0 errors. Existence of a run is not enough; the claimed outcome must match."""
+    ctx = {"dependency_edges": [], "previous_runs": [
+        {"target": "frontend", "fault": "traffic_spike", "errors_in_fault": 0},
+        {"target": "productcatalogservice", "fault": "pod_delete", "errors_in_fault": 2},
+        {"target": "adservice", "fault": "scale_to_zero", "errors_in_fault": 0}]}
+    props = [
+        {"experiment_id": "EXP-X-1", "target": "frontend", "fault_type": "traffic_spike", "hypothesis": "errors will rise",
+         "reason": "Previous runs showed traffic spikes led to error rate increases."},
+        {"experiment_id": "EXP-X-2", "target": "productcatalogservice", "fault_type": "pod_delete", "hypothesis": "h",
+         "reason": "Previous runs showed pods deletions resulted in immediate outages."},
+        {"experiment_id": "EXP-X-3", "target": "adservice", "fault_type": "scale_to_zero", "hypothesis": "h",
+         "reason": "Previous runs showed the frontend degrades gracefully without adservice."},
+        {"experiment_id": "EXP-X-4", "target": "productcatalogservice", "fault_type": "pod_delete", "hypothesis": "h",
+         "reason": "Previous runs showed no user impact."},
+    ]
+    out = {p["reason"].split(" showed ")[1][:12]: p for p in P.ground(props, ctx)}
+    spike = out["traffic spik"]
+    assert spike["grounding"].startswith("UNSUPPORTED") and "0 errors" in spike["grounding"]
+    assert spike["evidence"]["previous_errors_in_fault"] == 0
+    assert out["pods deletio"]["grounding"] == "ok"          # true: 2 errors recorded
+    assert out["the frontend"]["grounding"] == "ok"          # true: 0 errors, graceful
+    assert out["no user impa"]["grounding"].startswith("UNSUPPORTED")   # false: 2 errors
+    assert [p["grounding"] == "ok" for p in P.ground(props, ctx)][:2] == [True, True]      # unsupported ranked last
