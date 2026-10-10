@@ -1,0 +1,10 @@
+{"ts": "2026-10-10T09:56:27.440Z", "event": "run_started", "run_id": "20261010T095627Z_scale_to_zero_productcatalogservice", "target": "productcatalogservice", "fault": "scale_to_zero", "duration": 25}
+{"ts": "2026-10-10T09:56:27.901Z", "event": "preflight_ok", "original_replicas": 1, "image": "us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7"}
+{"ts": "2026-10-10T09:56:42.990Z", "event": "baseline", "n": 56, "errors": 0, "error_rate": 0.0, "p95_ms": 240.7, "consecutive_conn_errors": 0, "last_sample_age_s": 0.3560214042663574}
+{"ts": "2026-10-10T09:56:43.300Z", "event": "fault_injected", "target": "productcatalogservice", "replicas": 0, "at": "2026-10-10T09:56:42.995Z"}
+{"ts": "2026-10-10T09:56:45.709Z", "event": "threshold_breach", "metric": "p95_ms", "value": 2009.0, "limit": 1000.0, "n": 12, "errors": 1, "error_rate": 0.08333333333333333, "p95_ms": 2009.0, "consecutive_conn_errors": 0, "last_sample_age_s": 2.0360028743743896}
+{"ts": "2026-10-10T09:56:45.916Z", "event": "restore_ok", "target": "productcatalogservice", "replicas": 1, "attempt": 1}
+{"ts": "2026-10-10T09:56:48.726Z", "event": "rollout_status", "ok": true, "out": "Waiting for deployment \"productcatalogservice\" rollout to finish: 0 of 1 updated replicas are available...\ndeployment \"productcatalogservice\" successfully rolled out"}
+{"ts": "2026-10-10T09:57:06.241Z", "event": "recovered", "user_recovery_s": 19.04}
+{"ts": "2026-10-10T09:57:36.243Z", "event": "post_window", "n": 117, "errors": 0, "error_rate": 0.0, "p95_ms": 201.6, "consecutive_conn_errors": 0, "last_sample_age_s": 0.0968632698059082}
+{"ts": "2026-10-10T09:57:36.245Z", "event": "run_finished", "status": "ABORTED_THRESHOLD", "cleanup": "ok", "summary": "C:\\Projects\\microservices-demo\\results\\runs\\20261010T095627Z_scale_to_zero_productcatalogservice\\summary.json"}

@@ -157,6 +157,26 @@ python chaos\plot_run.py results\runs\<run_id>                                  
 python architecture\build_dependency_map.py                                              # dependency map
 ```
 
+### ResilienceAI control center (Streamlit UI)
+
+`ui/app.py` provides buttons for starting and stopping ingestion, starting an experiment, the kill switch, random experiments and rollback. Live metrics refresh every 2 s. In **API mode** it calls `chaos/api.py`, which runs every fault through `chaos/controller.py`, so the allowlist, 60 s cap, auto-abort, kill switch and guaranteed restore all still apply. **Demo mode** is a labelled simulation that touches nothing.
+
+| UI fault type | Real action |
+|---|---|
+| Service unavailability | `scale_to_zero` for the chosen duration, then restore |
+| Pod failure | `kubectl delete pod -l app=<target>`; Kubernetes recreates it; user recovery is measured from injection |
+| Latency injection | **Rejected (not implemented)**; nothing is injected |
+
+```powershell
+pip install -r ui\requirements.txt
+python chaos\api.py                 # window 1: backend on 127.0.0.1:8000
+streamlit run ui\app.py             # window 2: UI on localhost:8501
+```
+
+### Live dashboard
+
+`python chaos\dashboard.py` and then open http://127.0.0.1:8090. The dashboard is read-only. It shows the live error rate, P95 latency, the probe timeline with fault, restore, Kubernetes-ready and user-recovery markers, per-deployment readiness, the run event log and run history, and warnings for a present kill switch or an unrecovered fault.
+
 ## Results and Visualization
 
 The `results/` directory contains the Locust reports and generated chart.
