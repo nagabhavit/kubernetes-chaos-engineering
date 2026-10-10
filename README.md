@@ -1,6 +1,34 @@
 ﻿# Kubernetes Chaos Engineering — Online Boutique
 
-A local Kubernetes resilience experiment using Kind, Locust, and Python to observe application behavior during a controlled microservice disruption.
+AI-planned, safety-controlled chaos experiments on Google's Online Boutique in a local kind cluster. A local Ollama planner and a LangGraph workflow sit on top of a deterministic safety controller. Three application fault types (outage, pod crash, traffic spike) produce a ranked findings report. Network latency (`tc netem`) is validated separately on disposable lab pods. All AI runs locally, with no cloud API.
+
+
+## Quick start (Day 2: AI-planned, safety-controlled chaos)
+
+```powershell
+.\.venv313\Scripts\Activate.ps1
+pip install -r requirements.txt            # LangGraph, Locust, Streamlit, ...
+ollama pull qwen2.5:3b                     # free local planner model
+python -m pytest tests -q                  # 68 tests on fakes (Windows: 1 skipped, no socat)
+python chaos\cli.py health                 # cluster, frontend, models, kill switch
+python chaos\cli.py plan                   # AI ranks experiments (no execution)
+python chaos\cli.py dry-run --rank 1       # full workflow, nothing injected
+python chaos\cli.py run --rank 1           # asks for human approval, then injects
+python chaos\cli.py report                 # results\findings-report.md
+python chaos\cli.py latency-lab --delay-ms 200   # netem on disposable lab pods: before/during/after
+python chaos\cli.py msty-export            # optional: review packet for MANUAL review in Msty Studio
+python chaos\cli.py msty-import reply.md   # store the Msty reply with provenance + number check
+```
+
+| Document | Purpose |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | One-page architecture: agents, workflow, safety controls |
+| [docs/CLEAN_RUN.md](docs/CLEAN_RUN.md) | From-scratch setup, the three experiments, cleanup, troubleshooting |
+| [docs/AGENTS_AND_QA.md](docs/AGENTS_AND_QA.md) | Each agent's inputs and outputs; likely judge questions |
+| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 3-minute demo script and recording checklist |
+| [docs/TEAM_FORM.md](docs/TEAM_FORM.md) | Team submission form (tools, models, libraries, data) |
+| [results/findings-report.md](results/findings-report.md) | Ranked findings with evidence, fixes and resilience score |
+| [architecture/workflow-graph.md](architecture/workflow-graph.md) | LangGraph workflow diagram (generated) |
 
 ## Overview
 
@@ -165,7 +193,7 @@ python architecture\build_dependency_map.py                                     
 |---|---|
 | Service unavailability | `scale_to_zero` for the chosen duration, then restore |
 | Pod failure | `kubectl delete pod -l app=<target>`; Kubernetes recreates it; user recovery is measured from injection |
-| Latency injection | **Rejected (not implemented)**; nothing is injected |
+| Latency injection | **Rejected for app pods** (disabled by design); nothing is injected. Network latency runs only on disposable lab pods via `cli.py latency-lab` |
 
 ```powershell
 pip install -r ui\requirements.txt
@@ -177,8 +205,8 @@ streamlit run ui\app.py             # window 2: UI on localhost:8501
 
 `chaos/planner.py` gives an LLM the dependency map, the baseline and previous run results, along with the allowed catalog. The model returns ranked JSON proposals, each with a target, fault type, duration, hypothesis, expected impact and reason.
 
-- **Free local model by default:** [Ollama](https://ollama.com) with `qwen2.5:3b`. There is no account, API key or cost, and no data leaves the laptop. Anthropic Claude is optional (`CHAOS_PLANNER_PROVIDER=anthropic`, paid).
-- **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete` only, integer 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
+- **Free local model by default:** [Ollama](https://ollama.com) with `qwen2.5:3b`. There is no account, API key or cost, and no data leaves the laptop. No cloud API is used at runtime.
+- **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete`/`traffic_spike` only (spike target must be `frontend`), integer 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
 - **The AI never executes anything.** A proposal runs only when a human approves it in the UI (`POST /planner/run`). It is re-validated at that point and then goes through `controller.py`.
 - **Model unavailable or unusable output:** the planner falls back to a clearly labelled **rule-based** planner (fan-in plus untested edges). It is never presented as AI.
 - **Evidence:** every plan is saved to `results/plans/plan_<ts>.json`, with the inputs, raw model output and validation result.
@@ -189,11 +217,44 @@ ollama pull qwen2.5:3b              # one-time, ~1.9 GB
 python chaos\planner.py             # CLI, or use the planner section in the UI
 ```
 
+### Day 2: three fault types, findings and resilience score
+
+| Fault type | What it does | Restore |
+|---|---|---|
+| `scale_to_zero` (service unavailability) | Scales the deployment to 0 replicas | Scales back to the **original** replica count |
+| `pod_delete` (pod crash) | `kubectl delete pod -l app=<target>` | Kubernetes self-heals; recovery is measured from injection |
+| `traffic_spike` (sudden load) | ~80 extra Locust users on the frontend; no Kubernetes object is changed | The load is stopped. `restore.py` can also stop it |
+
+`chaos/analyze.py` (or **📊 Analyze all runs** in the UI) builds `results/findings-report.md` and `results/findings.json`:
+
+- **Deterministic:** findings come from explicit rules (readiness-vs-user-recovery gap, hard dependency, slow restart, latency under load, graceful degradation, probe coverage gap, detection delay). Severity is 0–100 and the resilience score is 100 − severity. Both formulas are printed in the report.
+- **AI (local Ollama):** writes only the explanation and fix text. Any sentence that quotes a number not found in that finding's evidence is rejected and replaced by a template. The report labels the source of each text.
+- **Honesty rules:** cancelled runs are excluded; findings from a single run are marked low confidence; services the probe never calls are reported as *not observed*, not *resilient*.
+
+### Day-2 runs (measured, from `results/findings-report.md`)
+
+| Experiment | Runs | Error rate in fault | K8s ready (s) | Users recovered (s) | P95 baseline → fault (ms) | Score |
+|---|---|---|---|---|---|---|
+| `scale_to_zero` → productcatalogservice | 6 | 67% | 2.83 (median) | **18.87** (median) | 238 → 2010 | 34.0 |
+| `pod_delete` → productcatalogservice | 1 | 67% | 0.18 | **21.48** (from the crash) | 60 → 2020 | 33.2 |
+| `traffic_spike` → frontend | 1 | 0% | — | no user impact | 63 → **252** | 98.1 |
+| `scale_to_zero` → cartservice | 1 | 67% | 32.06 | 48.16 | 102 → 104 | 31.1 |
+| `scale_to_zero` → adservice | 2 | 0% | 55.4 | no user impact | 214 → 246 | 97.4 |
+| `scale_to_zero` → paymentservice | 1 | 0% | 11.87 | not observed (probe never calls it) | 45 → 33 | 99.5 |
+
+**Resilience score: 65.5 / 100** (team-defined heuristic, 4 of 10 allowlisted services tested; 11 ranked findings). The main finding is repeatable: Kubernetes reports productcatalogservice Ready about 3 s after restore, but users keep failing for about 19 s.
+
+**Network latency lab (separate, not in the score):** 200 ms `tc netem` on the disposable `chaos-lab-server` pod. Two PASS runs showed ping +199.9 / +200.0 ms and HTTP +403 / +401 ms during the fault; removal was verified with `tc qdisc show` and both lab pods were deleted. One earlier lab run failed before injecting anything (YAML parse error in the lab manifest, since fixed) and is listed in the report.
+
+**Limits:** single-node kind cluster; one replica per service; several experiments have a single run (marked low confidence); the local 3B model's explanations are shallow (the number guard checks figures, not reasoning).
+
 ### Live dashboard
 
 `python chaos\dashboard.py` and then open http://127.0.0.1:8090. The dashboard is read-only. It shows the live error rate, P95 latency, the probe timeline with fault, restore, Kubernetes-ready and user-recovery markers, per-deployment readiness, the run event log and run history, and warnings for a present kill switch or an unrecovered fault.
 
-## Results and Visualization
+## Early manual experiment (before the controller existed)
+
+This section documents the first hand-run experiment. It is kept as history; current results are in the Day-1 and Day-2 sections above.
 
 The `results/` directory contains the Locust reports and generated chart.
 
@@ -231,9 +292,9 @@ Generate the visualization from the saved chaos-test history:
 python create_chart.py
 ```
 
-These commands assume the cluster, application, port-forward, Python environment, and dependencies are already configured. This README does not yet document a complete clean-machine setup.
+These commands assume the cluster, application, port-forward, Python environment, and dependencies are already configured. For a complete clean-machine setup, see [docs/CLEAN_RUN.md](docs/CLEAN_RUN.md).
 
-## Limitations
+### Limitations of this early experiment
 
 - The experiment ran on a local Kind cluster, not a production Kubernetes environment.
 - The baseline and disruption runs may differ in request timing and distribution.
@@ -241,7 +302,7 @@ These commands assume the cluster, application, port-forward, Python environment
 - Results are specific to this test configuration and should not be generalized to production workloads.
 - Repeated trials would improve confidence in the observations.
 
-## Conclusion
+### Conclusion of this early experiment
 
 The baseline test recorded no failed requests. During the disruption experiment, Locust recorded 11 failures and a maximum response time of approximately 20 seconds. Kubernetes subsequently restored the deployment. Timestamp correlation and repeated experiments are the next steps toward a stronger resilience assessment.
 

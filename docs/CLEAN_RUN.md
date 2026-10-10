@@ -9,6 +9,7 @@ Tick each box in order. Every command runs from `C:\Projects\microservices-demo`
 - [ ] Ollama installed (`winget install Ollama.Ollama`), then `ollama pull qwen2.5:3b`
 - [ ] Optional second local analysis model: `ollama pull llama3.2:3b` (~2 GB). Without it, `qwen2.5:3b` writes the narrative
 - [ ] Optional: Msty as the model server. Set `$env:OLLAMA_URL` to Msty's Local AI Service endpoint **only if** it speaks the Ollama API; confirm with `python chaos\cli.py health`
+- [ ] Optional: Msty review. `python chaos\cli.py msty-export` → paste `results\msty\msty_review_*.md` into a Msty chat with a local model → save the reply → `python chaos\cli.py msty-import <reply.md>`
 
 ## 1. Cluster and app
 ```powershell
@@ -21,7 +22,7 @@ kubectl --context kind-boutique-chaos wait --for=condition=available deployment 
 - [ ] **Separate window, keep open:** `kubectl --context kind-boutique-chaos port-forward -n boutique service/frontend 8080:80`
 
 ## 2. Verify before any experiment
-- [ ] `python -m pytest tests -q` → 62 passed, 1 skipped (Windows: no socat) (uses fakes; touches nothing)
+- [ ] `python -m pytest tests -q` → 68 tests; on Windows 1 is skipped (no socat) (uses fakes; touches nothing)
 - [ ] `python chaos\cli.py health` → `READY`
 - [ ] `python chaos\cli.py map` → dependency map rebuilt from the live cluster
 

@@ -36,6 +36,8 @@
 
 **What happens if your controller crashes mid-fault?** The state file records what was changed. The executor's watchdog, or a human running `restore.py`, undoes it. This is tested.
 
-**What is tested?** 63 automated tests with a fake `kubectl` and a fake shop. They cover validation, malformed AI output, kill switch, watchdog timeout, threshold abort, telemetry loss, injection failure, cleanup failure plus recovery, restoring the original replica count, recovery verification, Ollama unavailable or malformed output, no cloud API ever called, the AI number guard, the latency lab (pass, failure, cleanup failure, kill switch), and the LangGraph paths (dry run, rejection, human decline, full run).
+**What is tested?** 68 automated tests with a fake `kubectl` and a fake shop. They cover validation, malformed AI output, kill switch, watchdog timeout, threshold abort, telemetry loss, injection failure, cleanup failure plus recovery, restoring the original replica count, recovery verification, Ollama unavailable or malformed output, no cloud API ever called, the AI number guard, the latency lab (pass, failure, cleanup failure, kill switch), the LangGraph paths (dry run, rejection, human decline, full run), and the Msty export/import (no AI text exported, invented numbers flagged, original reply untouched).
+
+**Is Msty integrated?** Only as a manual review interface. `cli.py msty-export` produces a packet of measured facts and a prompt; a person runs it in Msty Studio with a local model; `cli.py msty-import` saves the reply with provenance and a number check. We did not find or test a programmatic Msty API, so Msty is not an automatic third agent, and nothing in the core workflow depends on it.
 
 **Limitations?** Single-node local cluster, 1 replica per service, a laptop. Several findings come from only 1–2 runs. Causes are hypotheses until verification experiments are run.

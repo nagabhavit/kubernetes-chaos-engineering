@@ -2,13 +2,13 @@
 
 | Field | Value |
 |---|---|
-| Team name | **TODO** |
+| Team name | ResilienceAI |
 | Members (name, role, contact) | **TODO** |
 | Repository | https://github.com/nagabhavit/kubernetes-chaos-engineering |
 | Demo video link | **TODO** |
 
 ## Tools
-Docker Desktop · kind v0.33.0 · kubectl v1.36.1 · Kubernetes (kind node) · Python 3.13 · PowerShell · Git/GitHub · Ollama 0.40.2 (optionally Msty as the model server) · `nicolaka/netshoot:v0.13` (latency lab pods: `tc netem`, curl, ping, socat)
+Docker Desktop · kind v0.33.0 · kubectl v1.36.1 · Kubernetes (kind node) · Python 3.13 · PowerShell · Git/GitHub · Ollama 0.40.2 (optional: Msty Studio for manual review of findings via `cli.py msty-export/msty-import`) · `nicolaka/netshoot:v0.13` (latency lab pods: `tc netem`, curl, ping, socat)
 
 ## AI models
 | Model | Where it runs | Used for |

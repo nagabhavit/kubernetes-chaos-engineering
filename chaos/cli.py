@@ -10,6 +10,8 @@ Single entry point.   python chaos\\cli.py <command>
   report     rebuild results/findings-report.md from all recorded runs
   graph      write the workflow diagram to architecture/workflow-graph.md
   latency-lab  network-latency validation on DISPOSABLE pods (passes args to chaos/netem_lab.py)
+  msty-export  write a review packet for MANUAL review in Msty Studio (no network call)
+  msty-import <reply.md>  store the Msty reply with provenance + number check
 
   run/dry-run options: --rank N  (use planner proposal N)   or a manual proposal:
                        --target X --fault F [--duration S] [--delay-ms MS] [--spike-users N]
@@ -140,6 +142,9 @@ def cmd_graph(_a) -> int:
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "latency-lab":
         return subprocess.run([sys.executable, str(HERE / "netem_lab.py"), *sys.argv[2:]]).returncode
+    if len(sys.argv) > 1 and sys.argv[1] in ("msty-export", "msty-import"):
+        import msty_export as M
+        return M.main(["export" if sys.argv[1] == "msty-export" else "import", *sys.argv[2:]])
     ap = argparse.ArgumentParser(prog="python chaos\\cli.py", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
