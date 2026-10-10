@@ -175,17 +175,33 @@ streamlit run ui\app.py             # window 2: UI on localhost:8501
 
 ### AI experiment planner
 
-`chaos/planner.py` gives an LLM (Anthropic Claude, `claude-sonnet-5-5` by default) the dependency map, the baseline and previous run results, along with the allowed catalog. The model returns ranked JSON proposals, each with a target, fault type, duration, hypothesis, expected impact and reason.
+`chaos/planner.py` gives an LLM the dependency map, the baseline and previous run results, along with the allowed catalog. The model returns ranked JSON proposals, each with a target, fault type, duration, hypothesis, expected impact and reason.
 
-- **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete` only, 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
+- **Free local model by default:** [Ollama](https://ollama.com) with `qwen2.5:3b`. There is no account, API key or cost, and no data leaves the laptop. Anthropic Claude is optional (`CHAOS_PLANNER_PROVIDER=anthropic`, paid).
+- **Deterministic validation:** each proposal is checked against the target allowlist, `scale_to_zero`/`pod_delete` only, integer 5–30 s duration, required fields and no duplicates. Invalid proposals are rejected and shown with their reasons.
 - **The AI never executes anything.** A proposal runs only when a human approves it in the UI (`POST /planner/run`). It is re-validated at that point and then goes through `controller.py`.
-- **No API key or unusable output:** the planner falls back to a clearly labelled **rule-based** planner (fan-in plus untested edges). It is never presented as AI.
+- **Model unavailable or unusable output:** the planner falls back to a clearly labelled **rule-based** planner (fan-in plus untested edges). It is never presented as AI.
 - **Evidence:** every plan is saved to `results/plans/plan_<ts>.json`, with the inputs, raw model output and validation result.
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "<your key>"    # set in the shell only; never commit it
-python chaos\planner.py                  # CLI, or use the planner section in the UI
+winget install Ollama.Ollama        # one-time, free
+ollama pull qwen2.5:3b              # one-time, ~1.9 GB
+python chaos\planner.py             # CLI, or use the planner section in the UI
 ```
+
+### Day 2: three fault types, findings and resilience score
+
+| Fault type | What it does | Restore |
+|---|---|---|
+| `scale_to_zero` (service unavailability) | Scales the deployment to 0 replicas | Scales back to the **original** replica count |
+| `pod_delete` (pod crash) | `kubectl delete pod -l app=<target>` | Kubernetes self-heals; recovery is measured from injection |
+| `traffic_spike` (sudden load) | ~80 extra Locust users on the frontend; no Kubernetes object is changed | The load is stopped. `restore.py` can also stop it |
+
+`chaos/analyze.py` (or **📊 Analyze all runs** in the UI) builds `results/findings-report.md` and `results/findings.json`:
+
+- **Deterministic:** findings come from explicit rules (readiness-vs-user-recovery gap, hard dependency, slow restart, latency under load, graceful degradation, probe coverage gap, detection delay). Severity is 0–100 and the resilience score is 100 − severity. Both formulas are printed in the report.
+- **AI (local Ollama):** writes only the explanation and fix text. Any sentence that quotes a number not found in that finding's evidence is rejected and replaced by a template. The report labels the source of each text.
+- **Honesty rules:** cancelled runs are excluded; findings from a single run are marked low confidence; services the probe never calls are reported as *not observed*, not *resilient*.
 
 ### Live dashboard
 

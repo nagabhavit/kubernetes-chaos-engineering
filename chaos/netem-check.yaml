@@ -1,0 +1,28 @@
+# Feasibility check for the network-latency experiment (Day 2).
+# A disposable pod adds a 100 ms netem delay to ITS OWN interface, measures it, removes it, and exits.
+# It changes nothing in any other pod or service. Delete it afterwards.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netem-check
+  namespace: boutique
+  labels: {purpose: chaos-feasibility-check}
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 120
+  containers:
+  - name: netshoot
+    image: nicolaka/netshoot:v0.13
+    securityContext:
+      capabilities: {add: ["NET_ADMIN"]}
+    command: ["sh", "-c"]
+    args:
+    - |
+      set -e
+      echo "before:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
+      tc qdisc add dev eth0 root netem delay 100ms
+      tc qdisc show dev eth0
+      echo "with 100ms netem:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
+      tc qdisc del dev eth0 root
+      echo "after removal:"; ping -c 3 -q frontend.boutique.svc.cluster.local | tail -1
+      echo NETEM_OK

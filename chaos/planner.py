@@ -7,10 +7,12 @@ rank chaos experiments, then VALIDATES every proposal deterministically against 
 controller's allowlist. The planner never executes anything: a validated proposal is
 only run when a human presses Run (UI) or passes it to controller.py.
 
-LLM:   Anthropic Messages API, configured by environment variables
-         ANTHROPIC_API_KEY      (required for AI mode; never stored in the repo)
-         CHAOS_PLANNER_MODEL    (default claude-sonnet-5-5)
-       Without a key, or if the model output is unusable, the planner falls back to a
+LLM:   Default: FREE local model via Ollama (https://ollama.com) - no account, no key,
+       nothing leaves the laptop.   ollama pull qwen2.5:3b
+         CHAOS_PLANNER_PROVIDER  ollama (default) | anthropic (paid, needs ANTHROPIC_API_KEY)
+         CHAOS_PLANNER_MODEL     default qwen2.5:3b (ollama) / claude-sonnet-5-5 (anthropic)
+         OLLAMA_URL              default http://localhost:11434
+       If the model is unavailable or its output is unusable, the planner falls back to a
        clearly labelled RULE-BASED planner. It is never presented as AI.
 
 CLI:   python chaos/planner.py            -> prints the plan, saves results/plans/<ts>.json
@@ -33,9 +35,11 @@ import controller as C  # noqa: E402
 
 ARCH = C.REPO / "architecture"
 PLANS_DIR = C.REPO / "results" / "plans"
+PROVIDER = os.getenv("CHAOS_PLANNER_PROVIDER", "ollama").lower()
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 API_URL = os.getenv("CHAOS_PLANNER_API_URL", "https://api.anthropic.com/v1/messages")
-MODEL = os.getenv("CHAOS_PLANNER_MODEL", "claude-sonnet-5-5")
-PLANNER_FAULTS = ("scale_to_zero", "pod_delete")
+MODEL = os.getenv("CHAOS_PLANNER_MODEL", "qwen2.5:3b" if PROVIDER == "ollama" else "claude-sonnet-5-5")
+PLANNER_FAULTS = ("scale_to_zero", "pod_delete", "traffic_spike")
 MIN_DUR, MAX_DUR = 5, 30          # stricter than the controller's 60 s cap
 MAX_PROPOSALS = 5
 TEXT_LIMIT = 400
@@ -92,6 +96,7 @@ def build_context() -> dict:
             "fault_types": {
                 "scale_to_zero": "deployment scaled to 0 replicas for duration_seconds, then restored",
                 "pod_delete": "target pods deleted once; Kubernetes recreates them; observed for duration_seconds",
+                "traffic_spike": "target MUST be 'frontend': ~80 extra simulated users for duration_seconds, then stopped",
             },
             "duration_seconds": {"min": MIN_DUR, "max": MAX_DUR},
             "auto_abort": "error rate > 20% or P95 > 1000 ms over 5 s",
@@ -111,7 +116,12 @@ def validate(raw: list) -> tuple[list, list]:
             rejected.append({"proposal": p, "reasons": ["not an object"]})
             continue
         t, f, d = p.get("target"), p.get("fault_type"), p.get("duration_seconds")
-        if t not in C.ALLOWED_TARGETS:
+        if isinstance(d, str) and d.strip().isdigit():   # small local models often quote numbers
+            d = int(d.strip())
+        if f == "traffic_spike":
+            if t != C.SPIKE_TARGET:
+                reasons.append(f"traffic_spike target must be '{C.SPIKE_TARGET}'")
+        elif t not in C.ALLOWED_TARGETS:
             reasons.append(f"target '{t}' not in allowlist")
         if f not in PLANNER_FAULTS:
             reasons.append(f"fault_type '{f}' not supported")
@@ -154,11 +164,43 @@ Rules:
 - Keep every text field under 300 characters. Do not invent metrics."""
 
 
-def call_llm(context: dict) -> tuple[str, dict]:
+def call_llm(context: dict, system: str = None) -> tuple[str, dict]:
+    system = system or SYSTEM
+    if PROVIDER == "ollama":
+        return call_ollama(context, system)
+    if PROVIDER != "anthropic":
+        raise RuntimeError(f"unknown CHAOS_PLANNER_PROVIDER '{PROVIDER}'")
+    return call_anthropic(context, system)
+
+
+def call_ollama(context: dict, system: str) -> tuple[str, dict]:
+    """Free local model. Ollama's native chat API with JSON-constrained output."""
+    body = json.dumps({
+        "model": MODEL, "stream": False, "format": "json",
+        "options": {"temperature": 0.2},
+        "messages": [{"role": "system", "content": system},
+                     {"role": "user", "content": json.dumps(context)}],
+    }).encode()
+    req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", data=body, method="POST",
+                                 headers={"content-type": "application/json"})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # localhost: never via proxy
+    try:
+        with opener.open(req, timeout=240) as r:
+            resp = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Ollama HTTP {e.code}: {e.read()[:300]!r} (did you run: ollama pull {MODEL}?)") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Ollama not reachable at {OLLAMA_URL} ({e.reason}); is Ollama running?") from e
+    text = (resp.get("message") or {}).get("content", "")
+    return text, {"model": f"{resp.get('model', MODEL)} (local, Ollama)",
+                  "usage": {"prompt_tokens": resp.get("prompt_eval_count"), "output_tokens": resp.get("eval_count")}}
+
+
+def call_anthropic(context: dict, system: str) -> tuple[str, dict]:
     key = os.getenv("ANTHROPIC_API_KEY")
     if not key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
-    body = json.dumps({"model": MODEL, "max_tokens": 2000, "system": SYSTEM,
+    body = json.dumps({"model": MODEL, "max_tokens": 2000, "system": system,
                        "messages": [{"role": "user", "content": json.dumps(context)}]}).encode()
     req = urllib.request.Request(API_URL, data=body, method="POST", headers={
         "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
@@ -206,6 +248,14 @@ def rule_based(context: dict) -> list:
             "safety_considerations": "10 s duration, auto-abort at 20% errors, kill switch available",
             "reason": f"rule-based score {score}: fan-in {len(callers)}, "
                       f"{'never tested' if t not in tested_targets else 'new fault type for this target'}"}))
+    if ("frontend", "traffic_spike") not in tested:
+        out.append((4, {
+            "target": "frontend", "fault_type": "traffic_spike", "duration_seconds": 20,
+            "hypothesis": "A sudden load spike raises P95 latency at the frontend; it returns to baseline within 30 s "
+                          "after the spike stops.",
+            "expected_impact": "higher latency on all pages; possible timeouts",
+            "safety_considerations": "20 s, load stops automatically, auto-abort at P95 > 1 s",
+            "reason": "rule-based score 4: traffic spike never tested"}))
     return [p for _, p in sorted(out, key=lambda x: -x[0])[:MAX_PROPOSALS]]
 
 

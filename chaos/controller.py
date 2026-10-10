@@ -42,7 +42,12 @@ ALLOWED_TARGETS = frozenset({
     "paymentservice", "productcatalogservice", "recommendationservice", "redis-cart",
     "shippingservice",
 })
-FAULT_TYPES = frozenset({"scale_to_zero"})
+# scale_to_zero: deployment -> 0 replicas for the duration, then restored (service unavailability)
+# pod_delete:    delete the target's pods once; Kubernetes recreates them (pod failure / crash)
+# traffic_spike: sudden Locust load (spike_users) against the frontend for the duration, then stopped
+FAULT_TYPES = frozenset({"scale_to_zero", "pod_delete", "traffic_spike"})
+SPIKE_TARGET = "frontend"    # traffic_spike changes no Kubernetes object; it only adds HTTP load at the entry point
+MAX_SPIKE_USERS = 150
 MAX_DURATION_S = 60          # hard cap, not overridable from the CLI
 MAX_LOAD_USERS = 50
 
@@ -178,7 +183,12 @@ class Prober(threading.Thread):
 # --------------------------------------------------------------------------- validation
 def validate(args) -> list[str]:
     errs = []
-    if args.target not in ALLOWED_TARGETS:
+    if args.fault == "traffic_spike":
+        if args.target != SPIKE_TARGET:
+            errs.append(f"traffic_spike target must be '{SPIKE_TARGET}'")
+        if not (1 <= args.spike_users <= MAX_SPIKE_USERS):
+            errs.append(f"spike-users must be 1..{MAX_SPIKE_USERS}")
+    elif args.target not in ALLOWED_TARGETS:
         errs.append(f"target '{args.target}' not in allowlist {sorted(ALLOWED_TARGETS)}")
     if args.fault not in FAULT_TYPES:
         errs.append(f"fault '{args.fault}' not supported {sorted(FAULT_TYPES)}")
@@ -225,6 +235,23 @@ def restore(log: EventLog, target: str, replicas: int, attempts: int = 3) -> boo
     return False
 
 
+def stop_spike(log: EventLog, proc) -> bool:
+    if proc is None:
+        log("restore_ok", action="no spike process was started")
+        return True
+    try:
+        proc.terminate()
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=10)
+    except Exception as e:  # noqa: BLE001
+        log("restore_failed", error=repr(e))
+        return False
+    log("restore_ok", action="traffic spike stopped", locust_exit=proc.returncode)
+    return True
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run one safe, allowlisted chaos experiment.")
     ap.add_argument("--target", required=True)
@@ -242,6 +269,7 @@ def main() -> int:
     ap.add_argument("--probe-timeout", type=float, default=2.0)
     ap.add_argument("--url", default="http://localhost:8080")
     ap.add_argument("--load-users", type=int, default=0, help="also run Locust with N users (0 = probe only)")
+    ap.add_argument("--spike-users", type=int, default=80, help=f"traffic_spike: Locust users (max {MAX_SPIKE_USERS})")
     ap.add_argument("--label", default="", help="free-text note stored in summary")
     args = ap.parse_args()
 
@@ -260,6 +288,7 @@ def main() -> int:
 
     prober = None
     locust = None
+    spike = None
     status = "PRECHECK_FAILED"
     fault_attempted = False
     original = None
@@ -312,14 +341,30 @@ def main() -> int:
         # ---------------- inject
         status = "RUNNING"
         STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps({"run_id": run_id, "target": args.target,
+        STATE_FILE.write_text(json.dumps({"run_id": run_id, "target": args.target, "fault": args.fault,
                                           "original_replicas": original, "written": utc_now()}), encoding="utf-8")
         fault_attempted = True
         t_inject = time.time()
-        r = scale(args.target, 0)
+        if args.fault == "traffic_spike":
+            spike = subprocess.Popen([
+                sys.executable, "-m", "locust", "-f", str(REPO / "src" / "loadgenerator" / "locustfile.py"),
+                "--host", args.url, "--headless", "--users", str(args.spike_users),
+                "--spawn-rate", str(args.spike_users), "--run-time", f"{args.duration + 10}s",
+                "--csv", str(run_dir / "spike"), "--csv-full-history", "--only-summary"],
+                cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            STATE_FILE.write_text(json.dumps({"run_id": run_id, "target": args.target, "fault": args.fault,
+                                              "original_replicas": original, "spike_pid": spike.pid,
+                                              "written": utc_now()}), encoding="utf-8")
+            r = subprocess.CompletedProcess([], 0 if spike.poll() is None else 1, "", "locust exited immediately")
+        elif args.fault == "pod_delete":
+            r = kubectl("delete", "pod", "-l", f"app={args.target}", "--wait=false")
+        else:
+            r = scale(args.target, 0)
         if r.returncode != 0:
             raise RuntimeError(f"injection failed: {r.stderr.strip()}")
-        log("fault_injected", target=args.target, replicas=0, at=iso(t_inject))
+        log("fault_injected", target=args.target, fault=args.fault, at=iso(t_inject),
+            detail=(r.stdout.strip().replace("\n", "; ") if args.fault == "pod_delete" else
+                    f"spike_users={args.spike_users}" if args.fault == "traffic_spike" else "replicas=0"))
 
         # ---------------- observe with guards
         deadline = t_inject + args.duration
@@ -362,7 +407,10 @@ def main() -> int:
             prev = signal.signal(signal.SIGINT, signal.SIG_IGN)   # cleanup must not be interrupted
             try:
                 t_restore = time.time()
-                ok = restore(log, args.target, original)
+                if args.fault == "traffic_spike":
+                    ok = stop_spike(log, spike)
+                else:
+                    ok = restore(log, args.target, original)
                 cleanup = "ok" if ok else "FAILED"
                 if ok:
                     STATE_FILE.unlink(missing_ok=True)
@@ -383,13 +431,23 @@ def main() -> int:
             recovery["k8s_ready_s"] = round(t_k8s - t_restore, 2) if rs.returncode == 0 else None
             log("rollout_status", ok=rs.returncode == 0, out=rs.stdout.strip() or rs.stderr.strip())
             # user-facing recovery: first probe of N consecutive OKs after restore
-            end = t_restore + args.recovery_timeout
+            # scale_to_zero: users recover after the restore.  pod_delete: Kubernetes self-heals,
+            # so measure from injection and look for the first OK streak after the first error.
+            ref = t_inject if args.fault == "pod_delete" else t_restore
+            recovery["measured_from"] = "fault_injected" if args.fault == "pod_delete" else "restore_issued"
+            end = time.time() + args.recovery_timeout
             first_ok = None
             while time.time() < end:
-                s = prober.samples_since(t_restore)
+                search_from = t_restore
+                if args.fault == "pod_delete":
+                    first_err = next((x[0] for x in prober.samples_since(t_inject) if not x[1] and x[3] != "conn_error"), None)
+                    if first_err is None:
+                        break  # no user-facing errors observed
+                    search_from = first_err
+                s = prober.samples_since(search_from)
                 streak, start = 0, None
                 for x in s:
-                    if x[1]:
+                    if x[1] and (args.fault != "traffic_spike" or x[2] <= args.max_p95_ms):
                         start = x[0] if streak == 0 else start
                         streak += 1
                         if streak >= args.recovery_streak:
@@ -400,8 +458,12 @@ def main() -> int:
                 if first_ok:
                     break
                 time.sleep(0.5)
-            if first_ok:
-                recovery.update(verified=True, user_recovery_s=round(first_ok - t_restore, 2), recovered_at=iso(first_ok))
+            if not first_ok and args.fault == "pod_delete" and recovery.get("k8s_rollout_ok") and \
+                    not any(not x[1] and x[3] != "conn_error" for x in prober.samples_since(t_inject)):
+                recovery.update(verified=True, user_recovery_s=None, note="no user-facing errors observed")
+                log("recovered", note="no user-facing errors observed")
+            elif first_ok:
+                recovery.update(verified=True, user_recovery_s=round(first_ok - ref, 2), recovered_at=iso(first_ok))
                 log("recovered", user_recovery_s=recovery["user_recovery_s"])
             else:
                 log("recovery_unverified", timeout_s=args.recovery_timeout)

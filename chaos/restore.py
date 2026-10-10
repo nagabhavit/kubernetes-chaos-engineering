@@ -18,6 +18,16 @@ def main() -> int:
         print("No active fault recorded. Nothing to restore.")
         return 0
     st = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    if st.get("spike_pid"):
+        import os
+        import signal
+        try:
+            os.kill(int(st["spike_pid"]), signal.SIGTERM)
+            print(f"Stopped traffic spike (pid {st['spike_pid']})")
+        except OSError as e:
+            print(f"Spike process not running ({e}); nothing to stop")
+        STATE_FILE.unlink()
+        return 0
     target, replicas = st["target"], int(st["original_replicas"])
     print(f"Restoring {target} to {replicas} replica(s) (run {st['run_id']})")
     base = ["kubectl", "--context", CONTEXT, "-n", NAMESPACE]

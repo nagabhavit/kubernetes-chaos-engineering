@@ -21,6 +21,8 @@ Endpoints used by the UI:
   POST /planner/plan                 AI planner ranks experiments (validated; never executes)
   GET  /planner/latest               most recent plan
   POST /planner/run                  {rank} run ONE validated proposal through the controller
+  POST /analysis/run                 rebuild findings report (numbers by code, narrative by AI)
+  GET  /analysis/latest              latest results/findings.json
 
 Standard library only. Binds to 127.0.0.1.
 """
@@ -41,6 +43,7 @@ sys.path.insert(0, str(HERE))
 import controller as C  # noqa: E402  (allowlist, Prober, kubectl helpers)
 import dashboard as D   # noqa: E402  (run readers, cached cluster view)
 import planner as PL    # noqa: E402  (AI planner + deterministic validator)
+import analyze as AN    # noqa: E402  (findings, severity ranking, resilience score)
 
 HOST, PORT = "127.0.0.1", 8000
 FRONTEND_URL = "http://localhost:8080"
@@ -50,6 +53,7 @@ TELEMETRY_DIR = C.REPO / "results" / "telemetry"
 FAULT_MAP = {
     "service_unavailability": "scale_to_zero",
     "pod_failure": "pod_delete",
+    "traffic_spike": "traffic_spike",
     "latency": None,
 }
 RANDOM_DURATION_S = 15
@@ -249,6 +253,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
+        if u.path in ("/", "/index.html"):
+            # This is an API, not the UI: send people to the Streamlit app.
+            self.send_response(302)
+            self.send_header("Location", "http://localhost:8501")
+            self.end_headers()
+            return
+        if u.path == "/ping":   # instant liveness check, no kubectl / network calls
+            return self._json(200, {"ok": True})
         if u.path == "/health":
             return self._json(200, {"ok": True, "cluster": D.cluster(), "frontend_ok": frontend_ok()})
         if u.path == "/ingestion/status":
@@ -260,6 +272,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, t)
         if u.path == "/experiments/current":
             return self._json(200, RUNNER.current())
+        if u.path == "/analysis/latest":
+            p = AN.OUT_JSON
+            return self._json(200, json.loads(p.read_text(encoding="utf-8")) if p.exists() else {})
         if u.path == "/planner/latest":
             return self._json(200, {k: v for k, v in (PLAN["latest"] or {}).items() if k != "context"})
         if u.path == "/runs":
@@ -288,6 +303,8 @@ class Handler(BaseHTTPRequestHandler):
                 duration = int(body.get("duration_seconds", 10))
             except (TypeError, ValueError):
                 return self._json(400, {"status": "REJECTED", "reasons": ["duration_seconds must be an integer"]})
+            if fault == "traffic_spike":
+                target = C.SPIKE_TARGET  # a spike always hits the entry point; no Kubernetes object is changed
             if not INGEST.running:
                 INGEST.start()  # make sure the UI has live telemetry for the run
             code, res = RUNNER.start(target, fault, duration, str(body.get("objective", "")))
@@ -302,6 +319,10 @@ class Handler(BaseHTTPRequestHandler):
             code, res = RUNNER.start(target, fault, RANDOM_DURATION_S, "random real experiment", origin="random")
             res["note"] = f"real {fault} on randomly chosen allowlisted target '{target}' for {RANDOM_DURATION_S}s"
             return self._json(code, res)
+        if path == "/analysis/run":
+            if RUNNER.active:
+                return self._json(409, {"error": "wait for the running experiment to finish"})
+            return self._json(200, AN.analyze())
         if path == "/planner/plan":
             if not PLAN_LOCK.acquire(blocking=False):
                 return self._json(409, {"error": "a plan is already being generated"})
@@ -339,7 +360,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"ResilienceAI backend on http://{HOST}:{PORT}  (Ctrl+C to stop)")
+    print(f"ResilienceAI backend (API only) on http://{HOST}:{PORT}  (Ctrl+C to stop)")
+    print("Open the app at http://localhost:8501  (start it with: streamlit run ui\\app.py)")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

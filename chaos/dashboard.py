@@ -235,7 +235,7 @@ async function overview(){
   document.querySelectorAll('#runs tr.click').forEach(tr=>tr.onclick=()=>{selected=tr.dataset.id; follow=(selected===o.runs[0].id); detail();});
 }
 
-function setupCanvas(cv){const r=window.devicePixelRatio||1, w=cv.clientWidth, h=+cv.getAttribute('height');
+function setupCanvas(cv){if(!cv.dataset.h) cv.dataset.h=cv.getAttribute('height'); const r=window.devicePixelRatio||1, w=cv.clientWidth, h=+cv.dataset.h;
   cv.width=w*r; cv.height=h*r; cv.style.height=h+'px'; const g=cv.getContext('2d'); g.scale(r,r); return [g,w,h];}
 
 function draw(d){

@@ -42,6 +42,7 @@ SERVICES = [
 FAULT_TYPES = {
     "Service unavailability (scale to 0)": "service_unavailability",
     "Pod failure (delete pod, K8s self-heals)": "pod_failure",
+    "Traffic spike (sudden load on frontend)": "traffic_spike",
     "Latency injection (not implemented yet)": "latency",
 }
 
@@ -135,10 +136,15 @@ def api_post(path, payload=None, timeout=30):
 
 
 def backend_up():
+    """Liveness via /ping (instant); cluster details via /health (kubectl can be slow on Windows)."""
     try:
-        return api_get("/health", timeout=2)
+        api_get("/ping", timeout=5)
     except requests.RequestException:
         return None
+    try:
+        return api_get("/health", timeout=20)
+    except requests.RequestException:
+        return {"ok": True, "cluster": {"error": "health check timed out"}, "frontend_ok": None}
 
 
 def live_fragment(fn):
@@ -282,8 +288,8 @@ if mode != "API mode":
     st.info("The planner needs API mode (real backend).")
 else:
     if st.button("🧠 Generate ranked plan", type="primary"):
-        with st.spinner("Planning… (an LLM call can take up to a minute)"):
-            code, body = api_post("/planner/plan", timeout=150)
+        with st.spinner("Planning with the local model… (can take 30–120 s on a laptop CPU)"):
+            code, body = api_post("/planner/plan", timeout=300)
         if code != 200:
             st.error(f"Planner failed: HTTP {code} {body}")
     try:
@@ -336,6 +342,7 @@ with left:
         target = st.selectbox("Target service", SERVICES, index=SERVICES.index("productcatalogservice"))
         fault_label = st.selectbox("Fault type", list(FAULT_TYPES.keys()))
         duration = st.slider("Requested fault duration (seconds)", min_value=5, max_value=30, value=10, step=5)
+        st.caption("Traffic spike always targets the frontend (it adds load; no service is modified).")
         objective = st.text_input("Experiment objective", "Observe service degradation and recovery")
         acknowledged = st.checkbox("I understand this experiment may affect availability.")
         submit_experiment = st.form_submit_button("Start experiment", type="primary", use_container_width=True)
@@ -596,6 +603,47 @@ else:
         st.dataframe(pd.DataFrame(st.session_state.experiment_history), use_container_width=True, hide_index=True)
     else:
         st.caption("No experiments recorded yet.")
+
+# =========================================================
+# FINDINGS & RESILIENCE SCORE
+# =========================================================
+
+st.divider()
+st.subheader("📊 Findings, severity ranking & resilience score")
+st.caption("All numbers, severities and the score are computed by code from the run evidence (formula in the report). "
+           "The local AI only writes the explanation and fix text; any AI sentence quoting a number that is not in the "
+           "evidence is rejected and replaced by a template.")
+if mode != "API mode":
+    st.info("Analysis needs API mode (real run evidence).")
+else:
+    if st.button("📊 Analyze all runs", type="primary"):
+        with st.spinner("Analyzing runs and writing the report… (the local model can take 30–120 s)"):
+            code, body = api_post("/analysis/run", timeout=300)
+        if code != 200:
+            st.error(f"Analysis failed: HTTP {code} {body}")
+    rep = api_get("/analysis/latest", timeout=10)
+    if rep.get("findings") is not None and rep.get("resilience"):
+        r = rep["resilience"]
+        a1, a2, a3 = st.columns(3)
+        a1.metric("Resilience score (heuristic)", f"{r['overall']} / 100")
+        a2.metric("Coverage", r["coverage"])
+        a3.metric("Findings", len(rep["findings"]))
+        nm = rep.get("narrative") or {}
+        st.caption(f"Narrative: {nm.get('model') or 'templates'}" + (f" — {nm.get('error')}" if nm.get("error") else ""))
+        st.dataframe(pd.DataFrame([{"rank": f["rank"], "severity": f"{f['severity']} ({f['severity_score']})",
+                                    "finding": f["title"], "runs": len(f["run_ids"]), "confidence": f["confidence"],
+                                    "recommended fix": f["recommended_fix"], "text": f["text_source"]}
+                                   for f in rep["findings"]]), use_container_width=True, hide_index=True)
+        for f in rep["findings"][:5]:
+            with st.expander(f"#{f['rank']} {f['title']}"):
+                st.json(f["evidence"])
+                if f.get("explanation"):
+                    st.write(f"**Explanation:** {f['explanation']}")
+                st.write(f"**Recommended fix:** {f['recommended_fix']}")
+                st.caption(f"Runs: {', '.join(f['run_ids'])}")
+        st.caption("Full report: `results/findings-report.md`")
+    else:
+        st.caption("No analysis yet — press Analyze.")
 
 # =========================================================
 # 6. ROLLBACK
